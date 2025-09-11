@@ -1,56 +1,19 @@
-# face-attendance-system
+Problem Description
 
-Face attendance system using face recognition with Python !
+Many rural schools in India rely on manual attendance systems, which are time-consuming and prone to errors. Teachers spend significant time marking attendance, reducing instructional time. Additionally, inaccurate records can lead to discrepancies in government reporting for schemes like mid-day meals. This problem is prevalent in under-resourced schools with limited access to technology, affecting administrative efficiency and student tracking.
 
-## Face attendance software
+Impact / Why this problem needs to be solved
 
-<p align="center">
-<a href="https://www.youtube.com/watch?v=z_dbnYHAQYg">
-    <img width="600" src="https://utils-computervisiondeveloper.s3.amazonaws.com/thumbnails/with_play_button/face_attendance.jpg" alt="Watch the video">
-    </br>Watch on YouTube: Face attendance system with Python and face recognition !
-</a>
-</p>
+This issue affects over 50% of rural schools, impacting millions of students and teachers. It leads to inefficiencies, delays in reporting, and potential mismanagement of resources. Solving this will save time, improve accuracy, and enhance resource allocation.
 
-## Spoofing feature
+Expected Outcomes
 
-<p align="center">
-<a href="https://www.youtube.com/watch?v=_KvtVk8Gk1A">
-    <img width="600" src="https://utils-computervisiondeveloper.s3.amazonaws.com/thumbnails/with_play_button/face_attendance_spoofing.jpg" alt="Watch the video">
-    </br>Watch on YouTube: Face attendance system with liveness detection !
-</a>
-</p>
+• A low-cost, user-friendly software or mobile application that automates attendance using facial recognition or RFID-based systems.
+• Requires minimal infrastructure and training for deployment in rural schools.
 
-## execution
+Relevant Stakeholders / Beneficiaries
 
-- Python 3.8
-
-### windows
-
-In Windows, you will need to do a couple of additional steps before starting with this tutorial:
-- Follow the instructions described in this video https://www.youtube.com/watch?v=oTv7HB6CRpQ
-- Install the packages in requirements_windows.txt.
-
-### linux, mac
-
-- Install the packages in requirements.txt
-
-## spoofing feature
-
-    git clone https://github.com/computervisioneng/Silent-Face-Anti-Spoofing.git
-    pip install -r Silent-Face-Anti-Spoofing/requirements.txt
-
-Remember to add the Silent-Face-Anti-Spoofing directory to your **PYTHONPATH**.
-
-## web app
-
-Face attendance + face recognition web app with React and Python!
-
-<p align="center">
-<a href="https://www.youtube.com/watch?v=yWmW5uEtNws">
-    <img width="600" src="https://utils-computervisiondeveloper.s3.amazonaws.com/thumbnails/with_play_button/face_attendance_web_app_react_python.jpg" alt="Watch the video">
-    </br>Watch on YouTube: Face attendance + face recognition web app with React and Python !
-</a>
-</p>
-
-The code for this project is available [here](https://github.com/computervisiondeveloper/face-attendance-web-app-react-python).
-
+• School administrators
+• Teachers
+• Students
+• Government education departments
