@@ -1,3 +1,4 @@
+
 import os
 import datetime
 import pickle
@@ -7,6 +8,7 @@ from CTkTable import CTkTable
 import cv2
 from PIL import Image, ImageTk
 import face_recognition
+import csv
 
 import util
 from test import test
@@ -18,6 +20,48 @@ ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark
 
 
 class AttendanceApp:
+    def load_log_data(self):
+        # Reset table data to just headers
+        self.table_data = [
+            ["Name", "Date", "Time", "Action"]
+        ]
+        # Read log file if it exists
+        if os.path.exists(self.log_path):
+            try:
+                with open(self.log_path, 'r', newline='') as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        if len(row) >= 3:
+                            name = row[0]
+                            datetime_str = row[1]
+                            action = row[2]
+                            # Parse datetime
+                            try:
+                                dt = datetime.datetime.fromisoformat(datetime_str.replace('T', ' '))
+                                date_str = dt.strftime('%Y-%m-%d')
+                                time_str = dt.strftime('%H:%M:%S')
+                            except Exception:
+                                date_str = datetime_str.split()[0] if ' ' in datetime_str else datetime_str
+                                time_str = datetime_str.split()[1] if ' ' in datetime_str else ''
+                            self.table_data.append([name, date_str, time_str, action])
+            except Exception as e:
+                print(f"Error reading log file: {e}")
+        # Update the table with new data
+        self.table.destroy()
+        self.table = CTkTable(
+            master=self.table_scrollable_frame,
+            row=len(self.table_data),
+            column=4,
+            values=self.table_data,
+            colors=["#202027", "#41464C"],  # Dark theme colors
+            header_color="#2F323A",  # Header color
+            hover_color="#494A53"  # Hover color
+        )
+        self.table.pack(fill="both", expand=True, padx=10, pady=10)
+    def refresh_log_table(self):
+        """Switch to table page and refresh the data"""
+        self.tabview.set("Log Table")
+        self.load_log_data()
     def __init__(self):
         self.main_window = ctk.CTk()
         self.main_window.geometry("1400x650+200+50")
@@ -28,8 +72,8 @@ class AttendanceApp:
         if not os.path.exists(self.db_dir):
             os.mkdir(self.db_dir)
 
-        self.log_path = "./log.txt"
-        self.logged_in_path = "./logged_in.txt"
+        self.log_path = "./log.csv"
+        self.logged_in_path = "./logged_in.csv"
 
         # Anti-spoofing model path
         self.model_dir = os.path.join("Silent-Face-Anti-Spoofing", "resources", "anti_spoof_models")
@@ -169,8 +213,6 @@ class AttendanceApp:
             hover_color="#494A53"  # Hover color
         )
         self.table.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        # Refresh button for table page (stays at bottom)
         refresh_table_button = ctk.CTkButton(
             table_main_frame, 
             text="Refresh Table", 
@@ -183,63 +225,7 @@ class AttendanceApp:
             hover_color="skyblue"
         )
         refresh_table_button.pack(pady=10)
-        
         # Load initial data
-        self.load_log_data()
-    
-    def load_log_data(self):
-        """Load data from log.txt into the table"""
-        # Reset table data to just headers
-        self.table_data = [
-            ["Name", "Date", "Time", "Action"]
-        ]
-        
-        # Read log file if it exists
-        if os.path.exists(self.log_path):
-            try:
-                with open(self.log_path, 'r') as f:
-                    lines = f.readlines()
-                
-                for line in lines:
-                    line = line.strip()
-                    if line:  # Skip empty lines
-                        parts = line.split(',')
-                        if len(parts) >= 3:
-                            name = parts[0]
-                            datetime_str = parts[1]
-                            action = parts[2]
-                            
-                            # Parse datetime
-                            try:
-                                dt = datetime.datetime.fromisoformat(datetime_str.replace('T', ' '))
-                                date_str = dt.strftime('%Y-%m-%d')
-                                time_str = dt.strftime('%H:%M:%S')
-                            except:
-                                # Fallback if datetime parsing fails
-                                date_str = datetime_str.split()[0] if ' ' in datetime_str else datetime_str
-                                time_str = datetime_str.split()[1] if ' ' in datetime_str else ''
-                            
-                            # Add row to table data
-                            self.table_data.append([name, date_str, time_str, action])
-            except Exception as e:
-                print(f"Error reading log file: {e}")
-        
-        # Update the table with new data
-        self.table.destroy()
-        self.table = CTkTable(
-            master=self.table_scrollable_frame,
-            row=len(self.table_data),
-            column=4,
-            values=self.table_data,
-            colors=["#202027", "#41464C"],  # Dark theme colors
-            header_color="#2F323A",  # Header color
-            hover_color="#494A53"  # Hover color
-        )
-        self.table.pack(fill="both", expand=True, padx=10, pady=10)
-    
-    def refresh_log_table(self):
-        """Switch to table page and refresh the data"""
-        self.tabview.set("Log Table")  # Switch to table tab
         self.load_log_data()
     
     def add_webcam(self, label):
@@ -265,8 +251,6 @@ class AttendanceApp:
         img_resized = self.most_recent_capture_pil.resize((680, 480), Image.Resampling.LANCZOS)
         imgtk = ImageTk.PhotoImage(image=img_resized)
         
-        self._label.configure(image=imgtk, text="")
-        self._label.image = imgtk  # Keep a reference
         
         self._label.after(20, self.process_webcam)
     
@@ -300,9 +284,10 @@ class AttendanceApp:
             logged_in_users = self.get_logged_in_users()
             if username in logged_in_users:
                 logged_in_users.remove(username)
-                with open(self.logged_in_path, 'w') as f:
+                with open(self.logged_in_path, 'w', newline='') as f:
+                    writer = csv.writer(f)
                     for user in logged_in_users:
-                        f.write(f'{user}\n')
+                        writer.writerow([user])
         except Exception as e:
             print(f"Error removing user from logged_in file: {e}")
     
