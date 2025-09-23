@@ -225,24 +225,14 @@ class IntegratedAttendanceSystem:
         # Student login/logout buttons
         self.student_login_btn = ctk.CTkButton(
             self.student_controls_frame,
-            text="Student Check-In",
+            text="Mark Present",
             font=ctk.CTkFont(size=16, weight="bold"),
             width=200,
             height=50,
-            command=self.student_checkin
+            command=self.mark_student_present
         )
         self.student_login_btn.pack(pady=10)
-        
-        self.student_logout_btn = ctk.CTkButton(
-            self.student_controls_frame,
-            text="Student Check-Out",
-            font=ctk.CTkFont(size=16),
-            width=200,
-            height=45,
-            command=self.student_checkout
-        )
-        self.student_logout_btn.pack(pady=10)
-        
+
         # Register student button
         self.register_student_btn = ctk.CTkButton(
             self.student_controls_frame,
@@ -253,6 +243,17 @@ class IntegratedAttendanceSystem:
             command=self.register_new_student
         )
         self.register_student_btn.pack(pady=10)
+        
+        # View Attendance button
+        self.view_attendance_btn = ctk.CTkButton(
+            self.student_controls_frame,
+            text="View Attendance Log",
+            font=ctk.CTkFont(size=14),
+            width=180,
+            height=40,
+            command=self.open_attendance_page
+        )
+        self.view_attendance_btn.pack(pady=10)
         
         # Right - Summary and logout
         self.summary_frame = ctk.CTkFrame(self.top_section)
@@ -283,20 +284,6 @@ class IntegratedAttendanceSystem:
             command=self.teacher_logout
         )
         self.teacher_logout_btn.pack(pady=20)
-        
-        # Bottom section - Attendance table
-        self.table_frame = ctk.CTkFrame(self.content_frame)
-        self.table_frame.pack(fill="both", expand=True, padx=5, pady=5)
-        
-        table_title = ctk.CTkLabel(
-            self.table_frame,
-            text="Today's Attendance Log",
-            font=ctk.CTkFont(size=18, weight="bold")
-        )
-        table_title.pack(pady=10)
-        
-        # Initialize attendance table
-        self.setup_attendance_table()
         
         # Configure grid weights for top section
         self.top_section.grid_columnconfigure(0, weight=1)
@@ -444,18 +431,18 @@ class IntegratedAttendanceSystem:
         except Exception as e:
             util.msg_box('Error', f'Logout error: {str(e)}')
             
-    def student_checkin(self):
-        """Handle student check-in"""
+    def mark_student_present(self):
+        """Mark student as present for today"""
         try:
             if not self.current_teacher:
                 util.msg_box('Error', 'No teacher logged in.')
                 return
                 
-            self.update_status("Processing student check-in...", "orange")
+            self.update_status("Marking student present...", "orange")
             
             if self.most_recent_capture_arr is None:
                 util.msg_box('Error', 'No camera feed detected.')
-                self.update_status("Check-in failed - No camera", "red")
+                self.update_status("Mark present failed - No camera", "red")
                 return
                 
             # Anti-spoofing check
@@ -470,71 +457,288 @@ class IntegratedAttendanceSystem:
                 
                 if student_name in ['unknown_person', 'no_persons_found']:
                     util.msg_box('Student Not Found', 'Student not recognized. Please register first or try again.')
-                    self.update_status("Check-in failed - Student not recognized", "red")
+                    self.update_status("Mark present failed - Student not recognized", "red")
                 else:
-                    # Mark attendance
-                    if self.db.mark_attendance(student_name, self.current_teacher, "IN"):
-                        util.msg_box('Welcome!', f'Welcome, {student_name}!')
-                        self.update_status(f"Checked in: {student_name}", "green")
-                        self.update_attendance_table()
-                        self.update_attendance_summary()
+                    # Check if student is already marked present today
+                    if self.is_student_present_today(student_name):
+                        util.msg_box('Already Present', f'{student_name} is already marked present for today.')
+                        self.update_status(f"Already present: {student_name}", "orange")
                     else:
-                        util.msg_box('Error', 'Check-in failed. Please try again.')
-                        self.update_status("Check-in failed - Database error", "red")
+                        # Mark attendance as present
+                        if self.db.mark_attendance(student_name, self.current_teacher, "PRESENT"):
+                            util.msg_box('Present!', f'{student_name} marked present for today!')
+                            self.update_status(f"Marked present: {student_name}", "green")
+                            self.update_attendance_summary()
+                        else:
+                            util.msg_box('Error', 'Failed to mark present. Please try again.')
+                            self.update_status("Mark present failed - Database error", "red")
                         
             else:  # Spoofing detected
                 util.msg_box('Security Alert!', 'Spoofing detected! Please use real face.')
-                self.update_status("Check-in failed - Spoofing detected", "red")
+                self.update_status("Mark present failed - Spoofing detected", "red")
                 
         except Exception as e:
-            util.msg_box('Error', f'Check-in error: {str(e)}')
-            self.update_status(f"Check-in error: {e}", "red")
+            util.msg_box('Error', f'Mark present error: {str(e)}')
+            self.update_status(f"Mark present error: {e}", "red")
             
-    def student_checkout(self):
-        """Handle student check-out"""
+    def is_student_present_today(self, student_name):
+        """Check if student is already marked present today"""
         try:
             if not self.current_teacher:
-                util.msg_box('Error', 'No teacher logged in.')
-                return
+                return False
                 
-            self.update_status("Processing student check-out...", "orange")
+            today = datetime.date.today().isoformat()
+            attendance_records = self.db.get_attendance_for_teacher(self.current_teacher, today)
             
-            if self.most_recent_capture_arr is None:
-                util.msg_box('Error', 'No camera feed detected.')
-                self.update_status("Check-out failed - No camera", "red")
-                return
-                
-            # Anti-spoofing check
-            label = test(
-                image=self.most_recent_capture_arr,
-                model_dir=self.model_dir,
-                device_id=0
-            )
+            for record in attendance_records:
+                if record['student_name'] == student_name and record['attendance_type'] == 'PRESENT':
+                    return True
+                    
+            return False
             
-            if label == 1:  # Real face detected
-                student_name = self.recognize_student(self.most_recent_capture_arr)
-                
-                if student_name in ['unknown_person', 'no_persons_found']:
-                    util.msg_box('Student Not Found', 'Student not recognized. Please register first or try again.')
-                    self.update_status("Check-out failed - Student not recognized", "red")
-                else:
-                    # Mark attendance
-                    if self.db.mark_attendance(student_name, self.current_teacher, "OUT"):
-                        util.msg_box('Goodbye!', f'Goodbye, {student_name}!')
-                        self.update_status(f"Checked out: {student_name}", "green")
-                        self.update_attendance_table()
-                        self.update_attendance_summary()
-                    else:
-                        util.msg_box('Error', 'Check-out failed. Please try again.')
-                        self.update_status("Check-out failed - Database error", "red")
-                        
-            else:  # Spoofing detected
-                util.msg_box('Security Alert!', 'Spoofing detected! Please use real face.')
-                self.update_status("Check-out failed - Spoofing detected", "red")
-                
         except Exception as e:
-            util.msg_box('Error', f'Check-out error: {str(e)}')
-            self.update_status(f"Check-out error: {e}", "red")
+            print(f"Error checking if student is present today: {e}")
+            return False
+            
+    def open_attendance_page(self):
+        """Open the attendance log page in a separate window"""
+        if not self.current_teacher:
+            util.msg_box('Error', 'No teacher logged in.')
+            return
+            
+        # Create attendance window
+        self.attendance_window = ctk.CTkToplevel(self.main_window)
+        self.attendance_window.geometry("1000x700+200+100")
+        self.attendance_window.title(f"Attendance Log - {self.current_teacher}'s Class")
+        self.attendance_window.grab_set()
+        
+        # Header
+        header_frame = ctk.CTkFrame(self.attendance_window)
+        header_frame.pack(fill="x", padx=10, pady=10)
+        
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text=f"Attendance Log - {self.current_teacher}'s Class",
+            font=ctk.CTkFont(size=24, weight="bold")
+        )
+        title_label.pack(side="left", padx=20, pady=15)
+        
+        # Refresh button
+        refresh_btn = ctk.CTkButton(
+            header_frame,
+            text="Refresh",
+            font=ctk.CTkFont(size=14),
+            width=100,
+            height=35,
+            command=self.refresh_attendance_table
+        )
+        refresh_btn.pack(side="right", padx=20, pady=15)
+        
+        # Date filter frame
+        date_frame = ctk.CTkFrame(self.attendance_window)
+        date_frame.pack(fill="x", padx=10, pady=5)
+        
+        date_label = ctk.CTkLabel(
+            date_frame,
+            text="Date Filter:",
+            font=ctk.CTkFont(size=14)
+        )
+        date_label.pack(side="left", padx=20, pady=10)
+        
+        # Today button
+        today_btn = ctk.CTkButton(
+            date_frame,
+            text="Today",
+            font=ctk.CTkFont(size=12),
+            width=80,
+            height=30,
+            command=lambda: self.filter_attendance_by_date("today")
+        )
+        today_btn.pack(side="left", padx=5, pady=10)
+        
+        # All time button
+        all_time_btn = ctk.CTkButton(
+            date_frame,
+            text="All Time",
+            font=ctk.CTkFont(size=12),
+            width=80,
+            height=30,
+            command=lambda: self.filter_attendance_by_date("all")
+        )
+        all_time_btn.pack(side="left", padx=5, pady=10)
+        
+        # Scrollable frame for table
+        self.attendance_scroll_frame = ctk.CTkScrollableFrame(
+            self.attendance_window,
+            width=950,
+            height=500
+        )
+        self.attendance_scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Initialize table
+        self.setup_scrollable_attendance_table()
+        
+        # Close button
+        close_btn = ctk.CTkButton(
+            self.attendance_window,
+            text="Close",
+            font=ctk.CTkFont(size=16),
+            width=120,
+            height=40,
+            command=self.attendance_window.destroy
+        )
+        close_btn.pack(pady=10)
+        
+    def setup_scrollable_attendance_table(self):
+        """Set up the scrollable attendance table"""
+        try:
+            # Clear existing table
+            for widget in self.attendance_scroll_frame.winfo_children():
+                widget.destroy()
+                
+            if not self.current_teacher:
+                return
+                
+            # Get attendance data
+            attendance_data = self.get_formatted_attendance_data()
+            
+            if not attendance_data:
+                no_data_label = ctk.CTkLabel(
+                    self.attendance_scroll_frame,
+                    text="No attendance records found",
+                    font=ctk.CTkFont(size=16)
+                )
+                no_data_label.pack(pady=50)
+                return
+            
+            # Create table headers
+            headers = ["Student Name", "Date", "Time", "Status"]
+            
+            # Table data with headers
+            table_data = [headers] + attendance_data
+            
+            # Create scrollable table
+            self.attendance_table = CTkTable(
+                self.attendance_scroll_frame,
+                values=table_data,
+                width=200,
+                height=40
+            )
+            self.attendance_table.pack(pady=10, fill="both", expand=True)
+            
+        except Exception as e:
+            print(f"Error setting up scrollable attendance table: {e}")
+            
+    def get_formatted_attendance_data(self):
+        """Get formatted attendance data for display"""
+        try:
+            if not self.current_teacher:
+                return []
+                
+            # Get all attendance records
+            attendance_data = self.db.get_attendance_for_teacher(self.current_teacher)
+            
+            formatted_data = []
+            for record in attendance_data:
+                # Parse timestamp
+                timestamp = record['timestamp']
+                if isinstance(timestamp, str):
+                    try:
+                        dt = datetime.datetime.fromisoformat(timestamp.replace('T', ' '))
+                        date_str = dt.strftime('%Y-%m-%d')
+                        time_str = dt.strftime('%H:%M:%S')
+                    except:
+                        date_str = timestamp.split()[0] if ' ' in timestamp else timestamp
+                        time_str = timestamp.split()[1] if ' ' in timestamp else ''
+                else:
+                    date_str = str(timestamp)
+                    time_str = ''
+                
+                # Format status
+                status = "Present" if record['attendance_type'] == "PRESENT" else record['attendance_type']
+                
+                formatted_data.append([
+                    record['student_name'],
+                    date_str,
+                    time_str,
+                    status
+                ])
+            
+            return formatted_data
+            
+        except Exception as e:
+            print(f"Error getting formatted attendance data: {e}")
+            return []
+            
+    def refresh_attendance_table(self):
+        """Refresh the attendance table"""
+        if hasattr(self, 'attendance_scroll_frame'):
+            self.setup_scrollable_attendance_table()
+            
+    def filter_attendance_by_date(self, filter_type):
+        """Filter attendance by date"""
+        try:
+            if not self.current_teacher or not hasattr(self, 'attendance_scroll_frame'):
+                return
+                
+            # Clear existing table
+            for widget in self.attendance_scroll_frame.winfo_children():
+                widget.destroy()
+                
+            if filter_type == "today":
+                today = datetime.date.today().isoformat()
+                attendance_data = self.db.get_attendance_for_teacher(self.current_teacher, today)
+            else:  # all time
+                attendance_data = self.db.get_attendance_for_teacher(self.current_teacher)
+                
+            # Format data
+            formatted_data = []
+            for record in attendance_data:
+                timestamp = record['timestamp']
+                if isinstance(timestamp, str):
+                    try:
+                        dt = datetime.datetime.fromisoformat(timestamp.replace('T', ' '))
+                        date_str = dt.strftime('%Y-%m-%d')
+                        time_str = dt.strftime('%H:%M:%S')
+                    except:
+                        date_str = timestamp.split()[0] if ' ' in timestamp else timestamp
+                        time_str = timestamp.split()[1] if ' ' in timestamp else ''
+                else:
+                    date_str = str(timestamp)
+                    time_str = ''
+                
+                status = "Present" if record['attendance_type'] == "PRESENT" else record['attendance_type']
+                
+                formatted_data.append([
+                    record['student_name'],
+                    date_str,
+                    time_str,
+                    status
+                ])
+            
+            if not formatted_data:
+                no_data_label = ctk.CTkLabel(
+                    self.attendance_scroll_frame,
+                    text=f"No attendance records found for {filter_type}",
+                    font=ctk.CTkFont(size=16)
+                )
+                no_data_label.pack(pady=50)
+                return
+                
+            headers = ["Student Name", "Date", "Time", "Status"]
+            table_data = [headers] + formatted_data
+            
+            # Create filtered table
+            filtered_table = CTkTable(
+                self.attendance_scroll_frame,
+                values=table_data,
+                width=200,
+                height=40
+            )
+            filtered_table.pack(pady=10, fill="both", expand=True)
+            
+        except Exception as e:
+            print(f"Error filtering attendance: {e}")
             
     def recognize_student(self, image):
         """Recognize student using face recognition and database"""
@@ -787,67 +991,13 @@ class IntegratedAttendanceSystem:
         except Exception as e:
             print(f"Error updating teachers list: {e}")
             
-    def setup_attendance_table(self):
-        """Set up the attendance table"""
-        try:
-            # Table headers
-            headers = ["Student Name", "Time", "Action"]
-            
-            # Get today's attendance
-            today = datetime.date.today().isoformat()
-            attendance_data = []
-            if self.current_teacher:
-                attendance_data = self.db.get_attendance_for_teacher(self.current_teacher, today)
-            
-            # Prepare table data
-            table_data = [headers]
-            for record in attendance_data:
-                # Parse timestamp
-                timestamp = record['timestamp']
-                if isinstance(timestamp, str):
-                    try:
-                        dt = datetime.datetime.fromisoformat(timestamp.replace('T', ' '))
-                        time_str = dt.strftime('%H:%M:%S')
-                    except:
-                        time_str = timestamp
-                else:
-                    time_str = str(timestamp)
-                    
-                table_data.append([
-                    record['student_name'],
-                    time_str,
-                    record['attendance_type']
-                ])
-            
-            # Create table
-            self.attendance_table = CTkTable(
-                self.table_frame,
-                values=table_data,
-                width=120,
-                height=30
-            )
-            self.attendance_table.pack(pady=10, fill="both", expand=True)
-            
-        except Exception as e:
-            print(f"Error setting up attendance table: {e}")
-            
-    def update_attendance_table(self):
-        """Update the attendance table with latest data"""
-        try:
-            if hasattr(self, 'attendance_table'):
-                self.attendance_table.destroy()
-            self.setup_attendance_table()
-            
-        except Exception as e:
-            print(f"Error updating attendance table: {e}")
-            
     def update_attendance_summary(self):
         """Update attendance summary display"""
         try:
             if not self.current_teacher:
                 return
                 
-            summary = self.db.get_todays_attendance_summary(self.current_teacher)
+            summary = self.get_present_absent_summary()
             
             text = f"""Today's Class Summary:
 
@@ -865,6 +1015,40 @@ Date: {datetime.date.today()}"""
                 
         except Exception as e:
             print(f"Error updating attendance summary: {e}")
+            
+    def get_present_absent_summary(self):
+        """Get today's present/absent summary for teacher's class"""
+        try:
+            today = datetime.date.today().isoformat()
+            
+            if not self.current_teacher:
+                return {'total_students': 0, 'present_students': 0, 'absent_students': 0, 'attendance_percentage': 0}
+            
+            # Get total students in class
+            total_students = len(self.db.get_students_for_teacher(self.current_teacher))
+            
+            # Get students marked present today
+            today_attendance = self.db.get_attendance_for_teacher(self.current_teacher, today)
+            present_students_set = set()
+            
+            for record in today_attendance:
+                if record['attendance_type'] == 'PRESENT':
+                    present_students_set.add(record['student_name'])
+            
+            present_students = len(present_students_set)
+            absent_students = total_students - present_students
+            attendance_percentage = (present_students / total_students * 100) if total_students > 0 else 0
+            
+            return {
+                'total_students': total_students,
+                'present_students': present_students,
+                'absent_students': absent_students,
+                'attendance_percentage': attendance_percentage
+            }
+                
+        except Exception as e:
+            print(f"Error getting present/absent summary: {e}")
+            return {'total_students': 0, 'present_students': 0, 'absent_students': 0, 'attendance_percentage': 0}
             
     def show_admin_panel(self):
         """Show admin login and panel"""
