@@ -1,3 +1,4 @@
+import csv
 import os
 import datetime
 import pickle
@@ -28,8 +29,8 @@ class AttendanceApp:
         if not os.path.exists(self.db_dir):
             os.mkdir(self.db_dir)
 
-        self.log_path = "./log.txt"
-        self.logged_in_path = "./logged_in.txt"
+        self.log_path = "./log.csv"
+        self.logged_in_path = "./logged_in.csv"
 
         # Anti-spoofing model path
         self.model_dir = os.path.join("Silent-Face-Anti-Spoofing", "resources", "anti_spoof_models")
@@ -133,7 +134,7 @@ class AttendanceApp:
         self.add_webcam(self.webcam_label)
     
     def setup_table_page(self):
-        """Setup the table page to display log.txt"""
+        """Setup the table page to display log.csv"""
         table_tab = self.tabview.tab("Log Table")
         
         # Create main frame for table tab
@@ -188,7 +189,7 @@ class AttendanceApp:
         self.load_log_data()
     
     def load_log_data(self):
-        """Load data from log.txt into the table"""
+        """Load data from log.csv into the table"""
         # Reset table data to just headers
         self.table_data = [
             ["Name", "Date", "Time", "Action"]
@@ -197,18 +198,14 @@ class AttendanceApp:
         # Read log file if it exists
         if os.path.exists(self.log_path):
             try:
-                with open(self.log_path, 'r') as f:
-                    lines = f.readlines()
-                
-                for line in lines:
-                    line = line.strip()
-                    if line:  # Skip empty lines
-                        parts = line.split(',')
-                        if len(parts) >= 3:
-                            name = parts[0]
-                            datetime_str = parts[1]
-                            action = parts[2]
-                            
+                with open(self.log_path, 'r', newline='') as file:
+                    reader = csv.reader(file)
+                    for row in reader:
+                        if len(row) >= 3:  # Ensure row has enough columns
+                            name = row[0]
+                            datetime_str = row[1]
+                            action = row[2]
+                                    
                             # Parse datetime
                             try:
                                 dt = datetime.datetime.fromisoformat(datetime_str.replace('T', ' '))
@@ -236,7 +233,7 @@ class AttendanceApp:
             hover_color="#494A53"  # Hover color
         )
         self.table.pack(fill="both", expand=True, padx=10, pady=10)
-    
+
     def refresh_log_table(self):
         """Switch to table page and refresh the data"""
         self.tabview.set("Log Table")  # Switch to table tab
@@ -275,36 +272,39 @@ class AttendanceApp:
         self.status_label.configure(text=message)
     
     def get_logged_in_users(self):
-        """Get list of currently logged in users"""
+        """Get list of currently logged in users from CSV"""
         if os.path.exists(self.logged_in_path):
             try:
-                with open(self.logged_in_path, 'r') as f:
-                    users = [line.strip() for line in f.readlines() if line.strip()]
+                with open(self.logged_in_path, 'r', newline='', encoding='utf-8') as f:
+                    csv_reader = csv.reader(f)
+                    users = [row[0] for row in csv_reader if row and row[0].strip()]
                 return users
             except Exception as e:
-                print(f"Error reading logged_in file: {e}")
+                print(f"Error reading logged_in CSV file: {e}")
                 return []
-        return []
+        return []                    
     
     def add_logged_in_user(self, username):
-        """Add user to logged in list"""
+        """Add user to logged in CSV list"""
         try:
-            with open(self.logged_in_path, 'a') as f:
-                f.write(f'{username}\n')
+            with open(self.logged_in_path, 'a', newline='', encoding='utf-8') as f:
+                csv_writer = csv.writer(f)
+                csv_writer.writerow([username])
         except Exception as e:
-            print(f"Error adding user to logged_in file: {e}")
+            print(f"Error adding user to logged_in CSV file: {e}")
     
     def remove_logged_in_user(self, username):
-        """Remove user from logged in list"""
+        """Remove user from logged in CSV list"""
         try:
             logged_in_users = self.get_logged_in_users()
             if username in logged_in_users:
                 logged_in_users.remove(username)
-                with open(self.logged_in_path, 'w') as f:
+                with open(self.logged_in_path, 'w', newline='', encoding='utf-8') as f:
+                    csv_writer = csv.writer(f)
                     for user in logged_in_users:
-                        f.write(f'{user}\n')
+                        csv_writer.writerow([user])
         except Exception as e:
-            print(f"Error removing user from logged_in file: {e}")
+            print(f"Error removing user from logged_in CSV file: {e}")
     
     def is_user_logged_in(self, username):
         """Check if user is currently logged in"""
@@ -334,9 +334,12 @@ class AttendanceApp:
                 else:
                     # User is not logged in, proceed with login
                     util.msg_box('Welcome back!', f'Welcome, {name}.')
-                    with open(self.log_path, 'a') as f:
-                        f.write(f'{name},{datetime.datetime.now()},in\n')
+                    current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    with open(self.log_path, 'a', newline='', encoding='utf-8') as f:
+                        csv_writer = csv.writer(f)
+                        csv_writer.writerow([name, current_time, 'IN'])
                     self.add_logged_in_user(name)
+                    self.load_log_data()  # Refresh the table display
                     self.update_status(f"Logged in: {name}")
         else:
             util.msg_box('Hey, you are a spoofer!', 'You are fake!')
@@ -366,9 +369,12 @@ class AttendanceApp:
                 else:
                     # User is logged in, proceed with logout
                     util.msg_box('Hasta la vista!', f'Goodbye, {name}.')
-                    with open(self.log_path, 'a') as f:
-                        f.write(f'{name},{datetime.datetime.now()},out\n')
+                    current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    with open(self.log_path, 'a', newline='', encoding='utf-8') as f:
+                        csv_writer = csv.writer(f)
+                        csv_writer.writerow([name, current_time, 'OUT'])
                     self.remove_logged_in_user(name)
+                    self.load_log_data()  # Refresh the table display
                     self.update_status(f"Logged out: {name}")
         else:
             util.msg_box('Hey, you are a spoofer!', 'You are fake!')
