@@ -64,15 +64,19 @@ class AttendanceDatabase:
                 )
             """)
             
-            # Class attendance table
+            # Comprehensive attendance table (student_id, name, class_teacher, date, status)
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS class_attendance (
+                CREATE TABLE IF NOT EXISTS attendance_records (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    student_id INTEGER NOT NULL,
                     student_name TEXT NOT NULL,
-                    teacher_name TEXT NOT NULL,
-                    attendance_type TEXT NOT NULL,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (student_name, teacher_name) REFERENCES students(name, teacher_name)
+                    class_teacher TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    status TEXT DEFAULT 'ABSENT' CHECK(status IN ('PRESENT', 'ABSENT')),
+                    marked_time TIMESTAMP NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(student_id, date),
+                    FOREIGN KEY (student_name, class_teacher) REFERENCES students(name, teacher_name)
                 )
             """)
             
@@ -301,92 +305,7 @@ class AttendanceDatabase:
             print(f"Error getting student face encodings: {e}")
             return {}
     
-    # Attendance management methods
-    def mark_attendance(self, student_name: str, teacher_name: str, attendance_type: str) -> bool:
-        """Mark attendance for a student"""
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute("""
-                    INSERT INTO class_attendance (student_name, teacher_name, attendance_type)
-                    VALUES (?, ?, ?)
-                """, (student_name, teacher_name, attendance_type))
-                
-                conn.commit()
-                return True
-                
-        except Exception as e:
-            print(f"Error marking attendance: {e}")
-            return False
-    
-    def get_attendance_for_teacher(self, teacher_name: str, date_filter: Optional[str] = None) -> List[Dict]:
-        """Get attendance records for a teacher's class"""
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                
-                if date_filter:
-                    cursor.execute("""
-                        SELECT student_name, attendance_type, timestamp
-                        FROM class_attendance
-                        WHERE teacher_name = ? AND date(timestamp) = ?
-                        ORDER BY timestamp DESC
-                    """, (teacher_name, date_filter))
-                else:
-                    cursor.execute("""
-                        SELECT student_name, attendance_type, timestamp
-                        FROM class_attendance
-                        WHERE teacher_name = ?
-                        ORDER BY timestamp DESC
-                    """, (teacher_name,))
-                
-                attendance = []
-                for row in cursor.fetchall():
-                    attendance.append({
-                        'student_name': row[0],
-                        'attendance_type': row[1],
-                        'timestamp': row[2]
-                    })
-                
-                return attendance
-                
-        except Exception as e:
-            print(f"Error getting attendance: {e}")
-            return []
-    
-    def get_todays_attendance_summary(self, teacher_name: str) -> Dict:
-        """Get today's attendance summary for a teacher's class"""
-        try:
-            today = datetime.date.today().isoformat()
-            
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                
-                # Get total students in class
-                cursor.execute("""
-                    SELECT COUNT(*) FROM students WHERE teacher_name = ?
-                """, (teacher_name,))
-                total_students = cursor.fetchone()[0]
-                
-                # Get students present today
-                cursor.execute("""
-                    SELECT COUNT(DISTINCT student_name) 
-                    FROM class_attendance 
-                    WHERE teacher_name = ? AND date(timestamp) = ? AND attendance_type = 'IN'
-                """, (teacher_name, today))
-                present_students = cursor.fetchone()[0]
-                
-                return {
-                    'total_students': total_students,
-                    'present_students': present_students,
-                    'absent_students': total_students - present_students,
-                    'attendance_percentage': (present_students / total_students * 100) if total_students > 0 else 0
-                }
-                
-        except Exception as e:
-            print(f"Error getting attendance summary: {e}")
-            return {'total_students': 0, 'present_students': 0, 'absent_students': 0, 'attendance_percentage': 0}
+    # Attendance Management Methods
     
     def cleanup_old_logins(self):
         """Clean up old login sessions (optional maintenance)"""
@@ -404,3 +323,200 @@ class AttendanceDatabase:
                 
         except Exception as e:
             print(f"Error cleaning up old logins: {e}")
+            
+    # Attendance Management Methods  
+    def mark_student_present(self, student_name: str, teacher_name: str) -> bool:
+        """Mark a student as present for today"""
+        try:
+            today = datetime.date.today().isoformat()
+            current_time = datetime.datetime.now()
+            
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get student ID
+                cursor.execute("""
+                    SELECT id FROM students 
+                    WHERE name = ? AND teacher_name = ?
+                """, (student_name, teacher_name))
+                
+                student_result = cursor.fetchone()
+                if not student_result:
+                    print(f"Student {student_name} not found in {teacher_name}'s class")
+                    return False
+                    
+                student_id = student_result[0]
+                
+                # Insert or update attendance record
+                cursor.execute("""
+                    INSERT OR REPLACE INTO attendance_records
+                    (student_id, student_name, class_teacher, date, status, marked_time)
+                    VALUES (?, ?, ?, ?, 'PRESENT', ?)
+                """, (student_id, student_name, teacher_name, today, current_time))
+                
+                conn.commit()
+                return True
+                
+        except Exception as e:
+            print(f"Error marking student present: {e}")
+            return False
+            
+    def is_student_present_today(self, student_name: str, teacher_name: str) -> bool:
+        """Check if student is already marked present today"""
+        try:
+            today = datetime.date.today().isoformat()
+            
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT status FROM attendance_records
+                    WHERE student_name = ? AND class_teacher = ? AND date = ?
+                """, (student_name, teacher_name, today))
+                
+                result = cursor.fetchone()
+                return result and result[0] == 'PRESENT'
+                
+        except Exception as e:
+            print(f"Error checking if student present: {e}")
+            return False
+    
+    def get_attendance_for_teacher(self, teacher_name: str, date: Optional[str] = None) -> List[Dict]:
+        """Get attendance data for a specific teacher's class (dynamic filtering)"""
+        try:
+            if date is None:
+                date = datetime.date.today().isoformat()
+                
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get all students in this teacher's class with their attendance status
+                cursor.execute("""
+                    SELECT 
+                        s.id as student_id,
+                        s.name as student_name,
+                        s.teacher_name as class_teacher,
+                        COALESCE(a.status, 'ABSENT') as status,
+                        a.marked_time,
+                        ? as date
+                    FROM students s
+                    LEFT JOIN attendance_records a ON (
+                        s.id = a.student_id AND 
+                        a.date = ?
+                    )
+                    WHERE s.teacher_name = ?
+                    ORDER BY s.name
+                """, (date, date, teacher_name))
+                
+                attendance_data = []
+                for row in cursor.fetchall():
+                    attendance_data.append({
+                        'student_id': row[0],
+                        'student_name': row[1], 
+                        'class_teacher': row[2],
+                        'status': row[3],
+                        'marked_time': row[4],
+                        'date': row[5]
+                    })
+                
+                return attendance_data
+                
+        except Exception as e:
+            print(f"Error getting attendance for teacher: {e}")
+            return []
+            
+    def get_attendance_summary(self, teacher_name: str, date: Optional[str] = None) -> Dict:
+        """Get attendance summary with present/absent counts for a teacher's class"""
+        try:
+            attendance_data = self.get_attendance_for_teacher(teacher_name, date)
+            
+            total_students = len(attendance_data)
+            present_students = len([student for student in attendance_data if student['status'] == 'PRESENT'])
+            absent_students = total_students - present_students
+            attendance_percentage = (present_students / total_students * 100) if total_students > 0 else 0
+            
+            return {
+                'total_students': total_students,
+                'present_students': present_students,
+                'absent_students': absent_students,
+                'attendance_percentage': attendance_percentage,
+                'date': date or datetime.date.today().isoformat()
+            }
+                
+        except Exception as e:
+            print(f"Error getting attendance summary: {e}")
+            return {
+                'total_students': 0,
+                'present_students': 0,
+                'absent_students': 0,
+                'attendance_percentage': 0,
+                'date': date or datetime.date.today().isoformat()
+            }
+            
+    def get_student_attendance_history(self, student_name: str, teacher_name: str, days: int = 30) -> List[Dict]:
+        """Get attendance history for a specific student over the last N days"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT date, status, marked_time
+                    FROM attendance_records
+                    WHERE student_name = ? AND class_teacher = ?
+                    ORDER BY date DESC
+                    LIMIT ?
+                """, (student_name, teacher_name, days))
+                
+                history = []
+                for row in cursor.fetchall():
+                    history.append({
+                        'date': row[0],
+                        'status': row[1],
+                        'marked_time': row[2]
+                    })
+                
+                return history
+                
+        except Exception as e:
+            print(f"Error getting student attendance history: {e}")
+            return []
+            return {'total_students': 0, 'present_students': 0, 'absent_students': 0, 'attendance_percentage': 0}
+            
+    def get_daily_attendance_list(self, teacher_name: str, date: Optional[str] = None) -> List[Dict]:
+        """Get list of all students with their daily attendance status"""
+        try:
+            if date is None:
+                date = datetime.date.today().isoformat()
+                
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT 
+                        s.name as student_name,
+                        COALESCE(a.status, 'ABSENT') as status,
+                        a.marked_time,
+                        ? as date
+                    FROM students s
+                    LEFT JOIN attendance_records a ON (
+                        s.id = a.student_id AND 
+                        a.date = ?
+                    )
+                    WHERE s.teacher_name = ?
+                    ORDER BY s.name
+                """, (date, date, teacher_name))
+                
+                attendance_list = []
+                for row in cursor.fetchall():
+                    attendance_list.append({
+                        'student_name': row[0],
+                        'status': row[1],
+                        'marked_time': row[2],
+                        'date': row[3]
+                    })
+                
+                return attendance_list
+                
+        except Exception as e:
+            print(f"Error getting daily attendance list: {e}")
+            return []

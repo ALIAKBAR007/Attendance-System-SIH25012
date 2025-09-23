@@ -460,12 +460,12 @@ class IntegratedAttendanceSystem:
                     self.update_status("Mark present failed - Student not recognized", "red")
                 else:
                     # Check if student is already marked present today
-                    if self.is_student_present_today(student_name):
+                    if self.db.is_student_present_today(student_name, self.current_teacher):
                         util.msg_box('Already Present', f'{student_name} is already marked present for today.')
                         self.update_status(f"Already present: {student_name}", "orange")
                     else:
-                        # Mark attendance as present
-                        if self.db.mark_attendance(student_name, self.current_teacher, "PRESENT"):
+                        # Mark attendance as present using new daily system
+                        if self.db.mark_student_present(student_name, self.current_teacher):
                             util.msg_box('Present!', f'{student_name} marked present for today!')
                             self.update_status(f"Marked present: {student_name}", "green")
                             self.update_attendance_summary()
@@ -480,25 +480,6 @@ class IntegratedAttendanceSystem:
         except Exception as e:
             util.msg_box('Error', f'Mark present error: {str(e)}')
             self.update_status(f"Mark present error: {e}", "red")
-            
-    def is_student_present_today(self, student_name):
-        """Check if student is already marked present today"""
-        try:
-            if not self.current_teacher:
-                return False
-                
-            today = datetime.date.today().isoformat()
-            attendance_records = self.db.get_attendance_for_teacher(self.current_teacher, today)
-            
-            for record in attendance_records:
-                if record['student_name'] == student_name and record['attendance_type'] == 'PRESENT':
-                    return True
-                    
-            return False
-            
-        except Exception as e:
-            print(f"Error checking if student is present today: {e}")
-            return False
             
     def open_attendance_page(self):
         """Open the attendance log page in a separate window"""
@@ -556,16 +537,16 @@ class IntegratedAttendanceSystem:
         )
         today_btn.pack(side="left", padx=5, pady=10)
         
-        # All time button
-        all_time_btn = ctk.CTkButton(
+        # Yesterday button
+        yesterday_btn = ctk.CTkButton(
             date_frame,
-            text="All Time",
+            text="Yesterday",
             font=ctk.CTkFont(size=12),
             width=80,
             height=30,
-            command=lambda: self.filter_attendance_by_date("all")
+            command=lambda: self.filter_attendance_by_date("yesterday")
         )
-        all_time_btn.pack(side="left", padx=5, pady=10)
+        yesterday_btn.pack(side="left", padx=5, pady=10)
         
         # Scrollable frame for table
         self.attendance_scroll_frame = ctk.CTkScrollableFrame(
@@ -635,33 +616,31 @@ class IntegratedAttendanceSystem:
             if not self.current_teacher:
                 return []
                 
-            # Get all attendance records
-            attendance_data = self.db.get_attendance_for_teacher(self.current_teacher)
+            # Get daily attendance list (shows all students with their status)
+            today = datetime.date.today().isoformat()
+            daily_attendance = self.db.get_attendance_for_teacher(self.current_teacher, today)
             
             formatted_data = []
-            for record in attendance_data:
-                # Parse timestamp
-                timestamp = record['timestamp']
-                if isinstance(timestamp, str):
-                    try:
-                        dt = datetime.datetime.fromisoformat(timestamp.replace('T', ' '))
-                        date_str = dt.strftime('%Y-%m-%d')
-                        time_str = dt.strftime('%H:%M:%S')
-                    except:
-                        date_str = timestamp.split()[0] if ' ' in timestamp else timestamp
-                        time_str = timestamp.split()[1] if ' ' in timestamp else ''
+            for record in daily_attendance:
+                # Parse marked time
+                marked_time = record['marked_time']
+                if marked_time:
+                    if isinstance(marked_time, str):
+                        try:
+                            dt = datetime.datetime.fromisoformat(marked_time.replace('T', ' '))
+                            time_str = dt.strftime('%H:%M:%S')
+                        except:
+                            time_str = marked_time
+                    else:
+                        time_str = str(marked_time)
                 else:
-                    date_str = str(timestamp)
-                    time_str = ''
-                
-                # Format status
-                status = "Present" if record['attendance_type'] == "PRESENT" else record['attendance_type']
+                    time_str = "Not marked"
                 
                 formatted_data.append([
                     record['student_name'],
-                    date_str,
+                    record['date'],
                     time_str,
-                    status
+                    record['status']
                 ])
             
             return formatted_data
@@ -676,7 +655,7 @@ class IntegratedAttendanceSystem:
             self.setup_scrollable_attendance_table()
             
     def filter_attendance_by_date(self, filter_type):
-        """Filter attendance by date"""
+        """Filter attendance records by date (today or yesterday)"""
         try:
             if not self.current_teacher or not hasattr(self, 'attendance_scroll_frame'):
                 return
@@ -685,29 +664,42 @@ class IntegratedAttendanceSystem:
             for widget in self.attendance_scroll_frame.winfo_children():
                 widget.destroy()
                 
+            # Calculate dates
+            today = datetime.date.today().isoformat()
+            yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+            
             if filter_type == "today":
-                today = datetime.date.today().isoformat()
                 attendance_data = self.db.get_attendance_for_teacher(self.current_teacher, today)
-            else:  # all time
-                attendance_data = self.db.get_attendance_for_teacher(self.current_teacher)
+                display_date = "Today"
+            elif filter_type == "yesterday":
+                attendance_data = self.db.get_attendance_for_teacher(self.current_teacher, yesterday)
+                display_date = "Yesterday"
+            else:
+                attendance_data = []
+                display_date = "Unknown"
                 
-            # Format data
+            # Format data for display
             formatted_data = []
             for record in attendance_data:
-                timestamp = record['timestamp']
-                if isinstance(timestamp, str):
+                # Use the correct field names from new database structure
+                marked_time = record.get('marked_time', '')
+                
+                if marked_time:
                     try:
-                        dt = datetime.datetime.fromisoformat(timestamp.replace('T', ' '))
-                        date_str = dt.strftime('%Y-%m-%d')
+                        # Parse the timestamp
+                        if isinstance(marked_time, str):
+                            dt = datetime.datetime.fromisoformat(marked_time.replace('T', ' '))
+                        else:
+                            dt = marked_time
                         time_str = dt.strftime('%H:%M:%S')
                     except:
-                        date_str = timestamp.split()[0] if ' ' in timestamp else timestamp
-                        time_str = timestamp.split()[1] if ' ' in timestamp else ''
+                        time_str = str(marked_time) if marked_time else 'N/A'
                 else:
-                    date_str = str(timestamp)
-                    time_str = ''
+                    time_str = 'N/A'  # For absent students
                 
-                status = "Present" if record['attendance_type'] == "PRESENT" else record['attendance_type']
+                # Use correct status field
+                status = "Present" if record.get('status') == "PRESENT" else "Absent"
+                date_str = record.get('date', display_date)
                 
                 formatted_data.append([
                     record['student_name'],
@@ -719,7 +711,7 @@ class IntegratedAttendanceSystem:
             if not formatted_data:
                 no_data_label = ctk.CTkLabel(
                     self.attendance_scroll_frame,
-                    text=f"No attendance records found for {filter_type}",
+                    text=f"No attendance records found for {display_date.lower()}",
                     font=ctk.CTkFont(size=16)
                 )
                 no_data_label.pack(pady=50)
@@ -739,6 +731,14 @@ class IntegratedAttendanceSystem:
             
         except Exception as e:
             print(f"Error filtering attendance: {e}")
+            # Show error message to user as well
+            error_label = ctk.CTkLabel(
+                self.attendance_scroll_frame,
+                text=f"Error loading attendance data: {str(e)}",
+                font=ctk.CTkFont(size=16),
+                text_color="red"
+            )
+            error_label.pack(pady=50)
             
     def recognize_student(self, image):
         """Recognize student using face recognition and database"""
@@ -1019,32 +1019,11 @@ Date: {datetime.date.today()}"""
     def get_present_absent_summary(self):
         """Get today's present/absent summary for teacher's class"""
         try:
-            today = datetime.date.today().isoformat()
-            
             if not self.current_teacher:
                 return {'total_students': 0, 'present_students': 0, 'absent_students': 0, 'attendance_percentage': 0}
             
-            # Get total students in class
-            total_students = len(self.db.get_students_for_teacher(self.current_teacher))
-            
-            # Get students marked present today
-            today_attendance = self.db.get_attendance_for_teacher(self.current_teacher, today)
-            present_students_set = set()
-            
-            for record in today_attendance:
-                if record['attendance_type'] == 'PRESENT':
-                    present_students_set.add(record['student_name'])
-            
-            present_students = len(present_students_set)
-            absent_students = total_students - present_students
-            attendance_percentage = (present_students / total_students * 100) if total_students > 0 else 0
-            
-            return {
-                'total_students': total_students,
-                'present_students': present_students,
-                'absent_students': absent_students,
-                'attendance_percentage': attendance_percentage
-            }
+            # Use the new daily attendance summary method
+            return self.db.get_attendance_summary(self.current_teacher)
                 
         except Exception as e:
             print(f"Error getting present/absent summary: {e}")
