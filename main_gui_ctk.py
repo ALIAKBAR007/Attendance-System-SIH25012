@@ -1054,184 +1054,374 @@ Date: {datetime.date.today()}"""
     def open_admin_panel(self):
         """Open comprehensive admin panel window with tabbed views"""
         self.admin_window = ctk.CTkToplevel(self.main_window)
-        self.admin_window.geometry("1200x800+200+100")
+        self.admin_window.geometry("1100x700+200+100")
         self.admin_window.title("Admin Panel - Attendance Management System")
         self.admin_window.grab_set()
         
-        # Title
-        title_label = ctk.CTkLabel(
+        # Compact header frame
+        header_frame = ctk.CTkFrame(
             self.admin_window,
-            text="Administrator Panel",
-            font=ctk.CTkFont(size=28, weight="bold")
+            height=55,
+            corner_radius=0,
+            fg_color=("gray85", "gray15")
         )
-        title_label.pack(pady=20)
+        header_frame.pack(fill="x", padx=0, pady=0)
+        header_frame.pack_propagate(False)
         
-        # Create tab view
-        self.admin_tabview = ctk.CTkTabview(self.admin_window, width=1150, height=700)
-        self.admin_tabview.pack(fill="both", expand=True, padx=20, pady=10)
+        # Compact title
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text="📊 Administrator Panel",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        title_label.pack(pady=15)
         
-        # Add tabs
-        self.admin_tabview.add("Teachers Data")
-        self.admin_tabview.add("Students Data")
+        # Main content container with reduced spacing
+        content_frame = ctk.CTkFrame(
+            self.admin_window,
+            corner_radius=10,
+            fg_color="transparent"
+        )
+        content_frame.pack(fill="both", expand=True, padx=15, pady=10)
+        
+        # Compact tab view
+        self.admin_tabview = ctk.CTkTabview(
+            content_frame, 
+            width=1070, 
+            height=600,
+            corner_radius=10,
+            border_width=1,
+            segmented_button_fg_color=("gray80", "gray20"),
+            segmented_button_selected_color=("blue", "blue"),
+            segmented_button_selected_hover_color=("dark blue", "dark blue")
+        )
+        self.admin_tabview.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Add modern tabs with icons
+        self.admin_tabview.add("👨‍🏫 Teachers Analytics")
+        self.admin_tabview.add("👨‍🎓 Students Analytics")
         
         # Setup tabs
         self.setup_teachers_tab()
         self.setup_students_tab()
         
         # Set default tab
-        self.admin_tabview.set("Teachers Data")
+        self.admin_tabview.set("👨‍🏫 Teachers Analytics")
         
     def setup_teachers_tab(self):
         """Setup the Teachers Data tab"""
-        teachers_tab = self.admin_tabview.tab("Teachers Data")
+        teachers_tab = self.admin_tabview.tab("👨‍🏫 Teachers Analytics")
         
-        # Control frame
-        control_frame = ctk.CTkFrame(teachers_tab)
-        control_frame.pack(fill="x", padx=10, pady=10)
+        # Compact control panel
+        control_panel = ctk.CTkFrame(
+            teachers_tab,
+            corner_radius=10,
+            border_width=1,
+            fg_color=("gray95", "gray10")
+        )
+        control_panel.pack(fill="x", padx=10, pady=10)
         
-        # Teacher selection
-        teacher_frame = ctk.CTkFrame(control_frame)
-        teacher_frame.pack(side="left", fill="x", expand=True, padx=5, pady=10)
+        # Compact control panel header
+        control_header = ctk.CTkLabel(
+            control_panel,
+            text="🔧 Analytics Controls",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=("blue", "light blue")
+        )
+        control_header.pack(pady=8)
         
-        ctk.CTkLabel(teacher_frame, text="Select Teacher:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=5)
+        # Compact controls container
+        controls_container = ctk.CTkFrame(control_panel, fg_color="transparent")
+        controls_container.pack(fill="x", padx=15, pady=(0, 10))
+        
+        # Compact teacher selection card
+        teacher_card = ctk.CTkFrame(
+            controls_container,
+            corner_radius=8,
+            fg_color=("white", "gray20")
+        )
+        teacher_card.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        
+        ctk.CTkLabel(
+            teacher_card, 
+            text="👤 Teacher Selection", 
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=("gray20", "gray80")
+        ).pack(pady=(8, 3))
         
         # Get all teachers for dropdown
         teachers = self.db.get_all_teachers()
         teacher_names = [teacher['name'] for teacher in teachers] if teachers else ["No teachers found"]
         
         self.teacher_dropdown = ctk.CTkComboBox(
-            teacher_frame,
+            teacher_card,
             values=teacher_names,
-            width=200,
-            command=self.on_teacher_selected
+            width=180,
+            height=28,
+            corner_radius=6,
+            command=self.on_teacher_selected,
+            font=ctk.CTkFont(size=11)
         )
-        self.teacher_dropdown.pack(pady=5)
+        self.teacher_dropdown.pack(pady=(3, 8))
         
-        # Date range frame
-        date_frame = ctk.CTkFrame(control_frame)
-        date_frame.pack(side="right", padx=5, pady=10)
+        # Date range card
+        date_card = ctk.CTkFrame(
+            controls_container,
+            corner_radius=12,
+            fg_color=("white", "gray20")
+        )
+        date_card.pack(side="right", padx=(15, 0))
         
-        ctk.CTkLabel(date_frame, text="Date Range:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=5)
+        ctk.CTkLabel(
+            date_card, 
+            text="📅 Date Range", 
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=("gray20", "gray80")
+        ).pack(pady=(15, 10))
         
-        date_controls = ctk.CTkFrame(date_frame)
-        date_controls.pack(pady=5)
+        date_controls = ctk.CTkFrame(date_card, fg_color="transparent")
+        date_controls.pack(pady=(0, 15), padx=15)
         
-        # Start date
-        start_frame = ctk.CTkFrame(date_controls)
-        start_frame.pack(side="left", padx=5)
-        ctk.CTkLabel(start_frame, text="From:", font=ctk.CTkFont(size=12)).pack()
+        # Compact start date
+        start_frame = ctk.CTkFrame(date_controls, fg_color="transparent")
+        start_frame.pack(side="left", padx=4)
+        ctk.CTkLabel(
+            start_frame, 
+            text="From:", 
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color=("gray40", "gray70")
+        ).pack(pady=(0, 2))
         
         self.start_date_teacher = CTkDatePicker(start_frame, max_date=datetime.date.today())
         # Set default date to today
         today_str = datetime.date.today().strftime("%m/%d/%Y")
         self.start_date_teacher.date_entry.insert(0, today_str)
         self.start_date_teacher.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
-        self.start_date_teacher.pack(pady=5)
+        self.start_date_teacher.pack(pady=2)
         
-        # End date  
-        end_frame = ctk.CTkFrame(date_controls)
-        end_frame.pack(side="left", padx=5)
-        ctk.CTkLabel(end_frame, text="To:", font=ctk.CTkFont(size=12)).pack()
+        # Compact end date
+        end_frame = ctk.CTkFrame(date_controls, fg_color="transparent")
+        end_frame.pack(side="left", padx=4)
+        ctk.CTkLabel(
+            end_frame, 
+            text="To:", 
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color=("gray40", "gray70")
+        ).pack(pady=(0, 2))
         
         self.end_date_teacher = CTkDatePicker(end_frame, max_date=datetime.date.today())
         # Set default date to today
         self.end_date_teacher.date_entry.insert(0, today_str)
         self.end_date_teacher.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
-        self.end_date_teacher.pack(pady=5)
+        self.end_date_teacher.pack(pady=2)
         
-        # Load data button
+        # Compact load button
         load_btn = ctk.CTkButton(
-            date_frame,
-            text="Load Data",
+            date_card,
+            text="📊 Load Analytics",
             command=self.load_teacher_data_with_validation,
             width=120,
-            height=32
+            height=32,
+            corner_radius=8,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color=("blue", "blue"),
+            hover_color=("dark blue", "dark blue")
         )
-        load_btn.pack(pady=10)
+        load_btn.pack(pady=(3, 8))
         
-        # Summary frame
-        self.teacher_summary_frame = ctk.CTkFrame(teachers_tab)
+        # Compact summary section
+        self.teacher_summary_frame = ctk.CTkFrame(
+            teachers_tab,
+            corner_radius=8,
+            border_width=1,
+            fg_color=("gray95", "gray10")
+        )
         self.teacher_summary_frame.pack(fill="x", padx=10, pady=5)
         
-        # Data display frame
-        self.teacher_data_frame = ctk.CTkScrollableFrame(teachers_tab, height=400)
-        self.teacher_data_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # Compact data display section
+        data_container = ctk.CTkFrame(
+            teachers_tab,
+            corner_radius=8,
+            border_width=1,
+            fg_color=("gray95", "gray10")
+        )
+        data_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        
+        # Compact data section header
+        data_header = ctk.CTkLabel(
+            data_container,
+            text="📈 Teachers Activity Data",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=("blue", "light blue")
+        )
+        data_header.pack(pady=8)
+        
+        # Compact scrollable data frame
+        self.teacher_data_frame = ctk.CTkScrollableFrame(
+            data_container,
+            height=320,
+            corner_radius=6,
+            fg_color=("white", "gray20")
+        )
+        self.teacher_data_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         
     def setup_students_tab(self):
         """Setup the Students Data tab"""
-        students_tab = self.admin_tabview.tab("Students Data")
+        students_tab = self.admin_tabview.tab("👨‍🎓 Students Analytics")
         
-        # Control frame
-        control_frame = ctk.CTkFrame(students_tab)
-        control_frame.pack(fill="x", padx=10, pady=10)
+        # Compact control panel
+        control_panel = ctk.CTkFrame(
+            students_tab,
+            corner_radius=10,
+            border_width=1,
+            fg_color=("gray95", "gray10")
+        )
+        control_panel.pack(fill="x", padx=10, pady=10)
         
-        # Teacher selection for students
-        teacher_frame = ctk.CTkFrame(control_frame)
-        teacher_frame.pack(side="left", fill="x", expand=True, padx=5, pady=10)
+        # Compact control panel header
+        control_header = ctk.CTkLabel(
+            control_panel,
+            text="🔧 Student Analytics Controls",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=("blue", "light blue")
+        )
+        control_header.pack(pady=8)
         
-        ctk.CTkLabel(teacher_frame, text="Select Teacher:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=5)
+        # Compact controls container
+        controls_container = ctk.CTkFrame(control_panel, fg_color="transparent")
+        controls_container.pack(fill="x", padx=15, pady=(0, 10))
+        
+        # Compact teacher selection card
+        teacher_card = ctk.CTkFrame(
+            controls_container,
+            corner_radius=8,
+            fg_color=("white", "gray20")
+        )
+        teacher_card.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        
+        ctk.CTkLabel(
+            teacher_card, 
+            text="👤 Select Teacher", 
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=("gray20", "gray80")
+        ).pack(pady=(8, 3))
         
         # Get all teachers for dropdown
         teachers = self.db.get_all_teachers()
         teacher_names = [teacher['name'] for teacher in teachers] if teachers else ["No teachers found"]
         
         self.student_teacher_dropdown = ctk.CTkComboBox(
-            teacher_frame,
+            teacher_card,
             values=teacher_names,
-            width=200,
-            command=self.on_student_teacher_selected
+            width=180,
+            height=28,
+            corner_radius=6,
+            command=self.on_student_teacher_selected,
+            font=ctk.CTkFont(size=11)
         )
-        self.student_teacher_dropdown.pack(pady=5)
+        self.student_teacher_dropdown.pack(pady=(3, 8))
         
-        # Date range frame
-        date_frame = ctk.CTkFrame(control_frame)
-        date_frame.pack(side="right", padx=5, pady=10)
+        # Date range card
+        date_card = ctk.CTkFrame(
+            controls_container,
+            corner_radius=12,
+            fg_color=("white", "gray20")
+        )
+        date_card.pack(side="right", padx=(15, 0))
         
-        ctk.CTkLabel(date_frame, text="Date Range:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=5)
+        ctk.CTkLabel(
+            date_card, 
+            text="📅 Date Range", 
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=("gray20", "gray80")
+        ).pack(pady=(15, 10))
         
-        date_controls = ctk.CTkFrame(date_frame)
-        date_controls.pack(pady=5)
+        date_controls = ctk.CTkFrame(date_card, fg_color="transparent")
+        date_controls.pack(pady=(0, 15), padx=15)
         
-        # Start date
-        start_frame = ctk.CTkFrame(date_controls)
-        start_frame.pack(side="left", padx=5)
-        ctk.CTkLabel(start_frame, text="From:", font=ctk.CTkFont(size=12)).pack()
+        # Compact start date
+        start_frame = ctk.CTkFrame(date_controls, fg_color="transparent")
+        start_frame.pack(side="left", padx=4)
+        ctk.CTkLabel(
+            start_frame, 
+            text="From:", 
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color=("gray40", "gray70")
+        ).pack(pady=(0, 2))
         
         self.start_date_student = CTkDatePicker(start_frame, max_date=datetime.date.today())
         # Set default date to today
         today_str = datetime.date.today().strftime("%m/%d/%Y")
         self.start_date_student.date_entry.insert(0, today_str)
         self.start_date_student.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
-        self.start_date_student.pack(pady=5)
+        self.start_date_student.pack(pady=2)
         
-        # End date
-        end_frame = ctk.CTkFrame(date_controls)
-        end_frame.pack(side="left", padx=5)
-        ctk.CTkLabel(end_frame, text="To:", font=ctk.CTkFont(size=12)).pack()
+        # Compact end date
+        end_frame = ctk.CTkFrame(date_controls, fg_color="transparent")
+        end_frame.pack(side="left", padx=4)
+        ctk.CTkLabel(
+            end_frame, 
+            text="To:", 
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color=("gray40", "gray70")
+        ).pack(pady=(0, 2))
         
         self.end_date_student = CTkDatePicker(end_frame, max_date=datetime.date.today())
         # Set default date to today
         self.end_date_student.date_entry.insert(0, today_str)
         self.end_date_student.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
-        self.end_date_student.pack(pady=5)
+        self.end_date_student.pack(pady=2)
         
-        # Load data button
+        # Compact load button
         load_btn = ctk.CTkButton(
-            date_frame,
-            text="Load Data",
+            date_card,
+            text="📊 Load Analytics",
             command=self.load_student_data_with_validation,
             width=120,
-            height=32
+            height=32,
+            corner_radius=8,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color=("blue", "blue"),
+            hover_color=("dark blue", "dark blue")
         )
-        load_btn.pack(pady=10)
+        load_btn.pack(pady=(3, 8))
         
-        # Summary frame
-        self.student_summary_frame = ctk.CTkFrame(students_tab)
+        # Compact summary section
+        self.student_summary_frame = ctk.CTkFrame(
+            students_tab,
+            corner_radius=8,
+            border_width=1,
+            fg_color=("gray95", "gray10")
+        )
         self.student_summary_frame.pack(fill="x", padx=10, pady=5)
         
-        # Data display frame
-        self.student_data_frame = ctk.CTkScrollableFrame(students_tab, height=400)
-        self.student_data_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # Compact data display section
+        data_container = ctk.CTkFrame(
+            students_tab,
+            corner_radius=8,
+            border_width=1,
+            fg_color=("gray95", "gray10")
+        )
+        data_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        
+        # Compact data section header
+        data_header = ctk.CTkLabel(
+            data_container,
+            text="📊 Student Attendance Data",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=("blue", "light blue")
+        )
+        data_header.pack(pady=8)
+        
+        # Compact scrollable data frame
+        self.student_data_frame = ctk.CTkScrollableFrame(
+            data_container,
+            height=320,
+            corner_radius=6,
+            fg_color=("white", "gray20")
+        )
+        self.student_data_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
     
     def on_teacher_selected(self, choice):
         """Handle teacher selection in teachers tab"""
@@ -1346,24 +1536,33 @@ Date: {datetime.date.today()}"""
                 start_date_str = str(start_date)
                 end_date_str = str(end_date)
 
-            # Display summary
+            # Display compact summary with icons
             summary_label = ctk.CTkLabel(
                 self.teacher_summary_frame,
-                text=f"Teacher Login/Logout Data ({start_date_str} to {end_date_str})",
-                font=ctk.CTkFont(size=16, weight="bold")
+                text=f"📈 Teacher Activity Summary\n{start_date_str} to {end_date_str}",
+                font=ctk.CTkFont(size=12, weight="bold"),
+                text_color=("blue", "light blue")
             )
-            summary_label.pack(pady=5)
+            summary_label.pack(pady=8)
 
             # Get teacher activity data within time frame
             teacher_data = self.get_teacher_activity_data(start_date_str, end_date_str)
             
             if not teacher_data:
-                no_data_label = ctk.CTkLabel(
+                no_data_frame = ctk.CTkFrame(
                     self.teacher_data_frame,
-                    text="No teacher activity found for the selected date range",
-                    font=ctk.CTkFont(size=14)
+                    corner_radius=10,
+                    fg_color=("gray90", "gray25")
                 )
-                no_data_label.pack(pady=50)
+                no_data_frame.pack(pady=30, padx=20, fill="x")
+                
+                no_data_label = ctk.CTkLabel(
+                    no_data_frame,
+                    text="📭 No teacher activity found for the selected date range",
+                    font=ctk.CTkFont(size=14),
+                    text_color=("gray50", "gray70")
+                )
+                no_data_label.pack(pady=30)
                 return
 
             # Prepare table data
@@ -1387,13 +1586,21 @@ Date: {datetime.date.today()}"""
             )
             table.pack(pady=10, fill="both", expand=True)
             
-            # Add Combined Activity Section
-            combined_label = ctk.CTkLabel(
+            # Add Combined Activity Section with modern styling
+            activity_section = ctk.CTkFrame(
                 self.teacher_data_frame,
-                text="Recent Combined Teacher Activity",
-                font=ctk.CTkFont(size=14, weight="bold")
+                corner_radius=10,
+                fg_color=("gray98", "gray15")
             )
-            combined_label.pack(pady=(20, 5))
+            activity_section.pack(pady=10, padx=8, fill="both", expand=True)
+            
+            combined_label = ctk.CTkLabel(
+                activity_section,
+                text="🕒 Recent Combined Teacher Activity",
+                font=ctk.CTkFont(size=12, weight="bold"),
+                text_color=("blue", "light blue")
+            )
+            combined_label.pack(pady=8)
             
             # Get combined activity data
             combined_activity = self.get_combined_teacher_activity(start_date_str, end_date_str, 15)
@@ -1412,30 +1619,38 @@ Date: {datetime.date.today()}"""
                 
                 # Create combined activity table
                 activity_table = CTkTable(
-                    self.teacher_data_frame,
+                    activity_section,
                     values=activity_table_data,
                     width=150,
                     height=25
                 )
-                activity_table.pack(pady=5, fill="both", expand=True)
+                activity_table.pack(pady=5, padx=10, fill="both", expand=True)
             else:
                 no_activity_label = ctk.CTkLabel(
-                    self.teacher_data_frame,
-                    text="No combined activity found for the selected date range",
-                    font=ctk.CTkFont(size=12),
-                    text_color="gray"
+                    activity_section,
+                    text="📭 No combined activity found for the selected date range",
+                    font=ctk.CTkFont(size=10),
+                    text_color=("gray50", "gray70")
                 )
                 no_activity_label.pack(pady=10)
             
         except Exception as e:
             print(f"Error loading teacher data: {e}")
-            error_label = ctk.CTkLabel(
+            error_frame = ctk.CTkFrame(
                 self.teacher_data_frame,
-                text=f"Error loading data: {str(e)}",
-                font=ctk.CTkFont(size=14),
-                text_color="red"
+                corner_radius=10,
+                fg_color=("red", "dark red"),
+                border_width=1
             )
-            error_label.pack(pady=50)
+            error_frame.pack(pady=15, padx=15, fill="x")
+            
+            error_label = ctk.CTkLabel(
+                error_frame,
+                text=f"⚠️ Error loading data: {str(e)}",
+                font=ctk.CTkFont(size=12),
+                text_color="white"
+            )
+            error_label.pack(pady=10)
             
     def get_teacher_activity_data(self, start_date, end_date):
         """Get teacher login/logout activity within date range"""
@@ -1583,24 +1798,33 @@ Date: {datetime.date.today()}"""
             for widget in self.student_summary_frame.winfo_children():
                 widget.destroy()
             
-            # Display summary
+            # Display modern summary with icons
             summary_label = ctk.CTkLabel(
                 self.student_summary_frame,
-                text=f"Student Attendance for {selected_teacher} ({start_date_str} to {end_date_str})",
-                font=ctk.CTkFont(size=16, weight="bold")
+                text=f"📊 Student Attendance Report\n{selected_teacher} • {start_date_str} to {end_date_str}",
+                font=ctk.CTkFont(size=16, weight="bold"),
+                text_color=("blue", "light blue")
             )
-            summary_label.pack(pady=5)
+            summary_label.pack(pady=15)
             
             # Get student attendance data
             student_data = self.get_student_attendance_in_range(selected_teacher, start_date_str, end_date_str)
             
             if not student_data:
-                no_data_label = ctk.CTkLabel(
+                no_data_frame = ctk.CTkFrame(
                     self.student_data_frame,
-                    text="No students found for the selected teacher",
-                    font=ctk.CTkFont(size=14)
+                    corner_radius=10,
+                    fg_color=("gray90", "gray25")
                 )
-                no_data_label.pack(pady=50)
+                no_data_frame.pack(pady=30, padx=20, fill="x")
+                
+                no_data_label = ctk.CTkLabel(
+                    no_data_frame,
+                    text="👨‍🎓 No students found for the selected teacher",
+                    font=ctk.CTkFont(size=14),
+                    text_color=("gray50", "gray70")
+                )
+                no_data_label.pack(pady=30)
                 return
             
             # Prepare table data
@@ -1627,13 +1851,21 @@ Date: {datetime.date.today()}"""
             
         except Exception as e:
             print(f"Error loading student data: {e}")
-            error_label = ctk.CTkLabel(
+            error_frame = ctk.CTkFrame(
                 self.student_data_frame,
-                text=f"Error loading data: {str(e)}",
-                font=ctk.CTkFont(size=14),
-                text_color="red"
+                corner_radius=10,
+                fg_color=("red", "dark red"),
+                border_width=1
             )
-            error_label.pack(pady=50)
+            error_frame.pack(pady=30, padx=20, fill="x")
+            
+            error_label = ctk.CTkLabel(
+                error_frame,
+                text=f"⚠️ Error loading data: {str(e)}",
+                font=ctk.CTkFont(size=14),
+                text_color="white"
+            )
+            error_label.pack(pady=20)
             
     def get_student_attendance_in_range(self, teacher_name, start_date, end_date):
         """Get student attendance data with missing data counted as absent"""
