@@ -188,7 +188,7 @@ class IntegratedAttendanceSystem:
         self.content_frame.grid_rowconfigure(0, weight=1)
         
     def build_student_attendance_ui(self):
-        """Build student attendance interface"""
+        """Build student attendance interface with tabview as main interface"""
         # Clear content frame
         for widget in self.content_frame.winfo_children():
             widget.destroy()
@@ -198,107 +198,291 @@ class IntegratedAttendanceSystem:
             text=f"Student Attendance - {self.current_teacher}'s Class"
         )
         
-        # Three-section layout
-        # Top section - Camera and controls
-        self.top_section = ctk.CTkFrame(self.content_frame)
-        self.top_section.pack(fill="x", padx=5, pady=5)
+        # Main TabView takes up entire content area
+        self.attendance_tabview = ctk.CTkTabview(
+            self.content_frame,
+            width=1050,
+            height=650
+        )
+        self.attendance_tabview.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Create tabs
+        self.attendance_tabview.add("Class Attendance")
+        self.attendance_tabview.add("Midday Meal Attendance")
+        
+        # Setup comprehensive Class Attendance tab
+        self.setup_class_attendance_tab()
+        
+        # Setup comprehensive Midday Meal Attendance tab  
+        self.setup_meal_attendance_tab()
+        
+        # Set default tab
+        self.attendance_tabview.set("Class Attendance")
+        
+        # Update summaries
+        self.update_class_summary()
+        self.update_meal_summary()
+        
+    def setup_class_attendance_tab(self):
+        """Setup comprehensive Class Attendance tab with full functionality"""
+        class_tab = self.attendance_tabview.tab("Class Attendance")
+        
+        # Main container for the tab
+        main_container = ctk.CTkFrame(class_tab)
+        main_container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Top section - Three column layout
+        top_section = ctk.CTkFrame(main_container)
+        top_section.pack(fill="x", padx=5, pady=5)
         
         # Left - Camera
-        self.camera_frame = ctk.CTkFrame(self.top_section)
-        self.camera_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        camera_frame = ctk.CTkFrame(top_section)
+        camera_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         
         camera_title = ctk.CTkLabel(
-            self.camera_frame,
+            camera_frame,
             text="Student Face Recognition",
-            font=ctk.CTkFont(size=18, weight="bold")
+            font=ctk.CTkFont(size=16, weight="bold")
         )
         camera_title.pack(pady=10)
         
         # Webcam display
-        self.webcam_label = ctk.CTkLabel(self.camera_frame, text="")
-        self.webcam_label.pack(pady=5)
+        self.class_webcam_label = ctk.CTkLabel(camera_frame, text="")
+        self.class_webcam_label.pack(pady=5)
         
-        # Middle - Student controls
-        self.student_controls_frame = ctk.CTkFrame(self.top_section)
-        self.student_controls_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+        # Middle - Controls and Buttons
+        controls_frame = ctk.CTkFrame(top_section)
+        controls_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
         
-        student_title = ctk.CTkLabel(
-            self.student_controls_frame,
-            text="Student Operations",
-            font=ctk.CTkFont(size=18, weight="bold")
+        controls_title = ctk.CTkLabel(
+            controls_frame,
+            text="Class Attendance Controls",
+            font=ctk.CTkFont(size=16, weight="bold")
         )
-        student_title.pack(pady=15)
+        controls_title.pack(pady=15)
         
-        # Student login/logout buttons
-        self.student_login_btn = ctk.CTkButton(
-            self.student_controls_frame,
+        # Class attendance buttons
+        buttons_frame = ctk.CTkFrame(controls_frame)
+        buttons_frame.pack(pady=20)
+        
+        # Mark Present button
+        self.class_mark_present_btn = ctk.CTkButton(
+            buttons_frame,
             text="Mark Present",
-            font=ctk.CTkFont(size=16, weight="bold"),
-            width=200,
-            height=50,
-            command=self.mark_student_present
+            font=ctk.CTkFont(size=14, weight="bold"),
+            width=160,
+            height=45,
+            command=lambda: self._mark_regular_attendance("present"),
+            fg_color=("#1f6aa5", "#1f6aa5")
         )
-        self.student_login_btn.pack(pady=10)
-
+        self.class_mark_present_btn.pack(pady=5)
+        
         # Register student button
-        self.register_student_btn = ctk.CTkButton(
-            self.student_controls_frame,
+        self.class_register_student_btn = ctk.CTkButton(
+            buttons_frame,
             text="Register New Student",
-            font=ctk.CTkFont(size=14),
-            width=180,
-            height=40,
-            command=self.register_new_student
+            font=ctk.CTkFont(size=12),
+            width=160,
+            height=35,
+            command=self.register_new_student,
+            fg_color=("#388e3c", "#388e3c")
         )
-        self.register_student_btn.pack(pady=10)
+        self.class_register_student_btn.pack(pady=5)
         
         # View Attendance button
-        self.view_attendance_btn = ctk.CTkButton(
-            self.student_controls_frame,
+        self.class_view_attendance_btn = ctk.CTkButton(
+            buttons_frame,
             text="View Attendance Log",
-            font=ctk.CTkFont(size=14),
-            width=180,
-            height=40,
-            command=self.open_attendance_page
+            font=ctk.CTkFont(size=12),
+            width=160,
+            height=35,
+            command=lambda: self.open_attendance_page("regular"),
+            fg_color=("#d32f2f", "#d32f2f")
         )
-        self.view_attendance_btn.pack(pady=10)
+        self.class_view_attendance_btn.pack(pady=5)
         
         # Right - Summary and logout
-        self.summary_frame = ctk.CTkFrame(self.top_section)
-        self.summary_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
+        summary_frame = ctk.CTkFrame(top_section)  
+        summary_frame.grid(row=0, column=2, padx=5, pady=5, sticky="nsew")
         
         summary_title = ctk.CTkLabel(
-            self.summary_frame,
-            text="Class Summary",
-            font=ctk.CTkFont(size=18, weight="bold")
+            summary_frame,
+            text="Summary & Controls",
+            font=ctk.CTkFont(size=16, weight="bold")
         )
-        summary_title.pack(pady=15)
+        summary_title.pack(pady=10)
         
-        # Attendance summary
-        self.summary_textbox = ctk.CTkTextbox(
-            self.summary_frame,
-            width=250,
-            height=150
+        # Overall attendance summary
+        self.class_overall_summary = ctk.CTkTextbox(
+            summary_frame,
+            width=220,
+            height=120
         )
-        self.summary_textbox.pack(pady=10)
+        self.class_overall_summary.pack(pady=10)
         
         # Teacher logout button
         self.teacher_logout_btn = ctk.CTkButton(
-            self.summary_frame,
+            summary_frame,
             text="Teacher Logout",
-            font=ctk.CTkFont(size=16),
-            width=180,
-            height=45,
-            command=self.teacher_logout
+            font=ctk.CTkFont(size=14),
+            width=160,
+            height=40,
+            command=self.teacher_logout,
+            fg_color=("#d32f2f", "#d32f2f")
         )
-        self.teacher_logout_btn.pack(pady=20)
+        self.teacher_logout_btn.pack(pady=15)
         
         # Configure grid weights for top section
-        self.top_section.grid_columnconfigure(0, weight=1)
-        self.top_section.grid_columnconfigure(1, weight=1)
-        self.top_section.grid_columnconfigure(2, weight=1)
+        top_section.grid_columnconfigure(0, weight=1)
+        top_section.grid_columnconfigure(1, weight=1)
+        top_section.grid_columnconfigure(2, weight=1)
         
-        # Update summary
-        self.update_attendance_summary()
+        # Bottom section - Detailed summary
+        bottom_section = ctk.CTkFrame(main_container)
+        bottom_section.pack(fill="x", padx=5, pady=(10, 5))
+        
+        detailed_title = ctk.CTkLabel(
+            bottom_section,
+            text="Today's Class Attendance Summary",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        detailed_title.pack(pady=10)
+        
+        self.class_summary_textbox = ctk.CTkTextbox(
+            bottom_section,
+            width=900,
+            height=120
+        )
+        self.class_summary_textbox.pack(pady=10)
+        
+    def setup_meal_attendance_tab(self):
+        """Setup comprehensive Midday Meal Attendance tab with full functionality"""
+        meal_tab = self.attendance_tabview.tab("Midday Meal Attendance")
+        
+        # Main container for the tab
+        main_container = ctk.CTkFrame(meal_tab)
+        main_container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Top section - Three column layout
+        top_section = ctk.CTkFrame(main_container)
+        top_section.pack(fill="x", padx=5, pady=5)
+        
+        # Left - Camera
+        camera_frame = ctk.CTkFrame(top_section)
+        camera_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        
+        camera_title = ctk.CTkLabel(
+            camera_frame,
+            text="Student Face Recognition",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        camera_title.pack(pady=10)
+        
+        # Webcam display (shared with class tab)
+        self.meal_webcam_label = ctk.CTkLabel(camera_frame, text="")
+        self.meal_webcam_label.pack(pady=5)
+        
+        # Middle - Controls and Buttons
+        controls_frame = ctk.CTkFrame(top_section)
+        controls_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+        
+        controls_title = ctk.CTkLabel(
+            controls_frame,
+            text="Meal Attendance Controls",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        controls_title.pack(pady=15)
+        
+        # Meal attendance buttons
+        buttons_frame = ctk.CTkFrame(controls_frame)
+        buttons_frame.pack(pady=20)
+        
+        # Mark Meal Present button
+        self.meal_mark_present_btn = ctk.CTkButton(
+            buttons_frame,
+            text="Mark Meal Present",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            width=160,
+            height=45,
+            command=lambda: self._mark_meal_attendance("present"),
+            fg_color=("#1f6aa5", "#1f6aa5")
+        )
+        self.meal_mark_present_btn.pack(pady=5)
+        
+        # Register student button (same functionality)
+        self.meal_register_student_btn = ctk.CTkButton(
+            buttons_frame,
+            text="Register New Student",
+            font=ctk.CTkFont(size=12),
+            width=160,
+            height=35,
+            command=self.register_new_student,
+            fg_color=("#388e3c", "#388e3c")
+        )
+        self.meal_register_student_btn.pack(pady=5)
+        
+        # View Meal Log button
+        self.meal_view_attendance_btn = ctk.CTkButton(
+            buttons_frame,
+            text="View Meal Log",
+            font=ctk.CTkFont(size=12),
+            width=160,
+            height=35,
+            command=lambda: self.open_attendance_page("meal"),
+            fg_color=("#d32f2f", "#d32f2f")
+        )
+        self.meal_view_attendance_btn.pack(pady=5)
+        
+        # Right - Summary
+        summary_frame = ctk.CTkFrame(top_section)
+        summary_frame.grid(row=0, column=2, padx=5, pady=5, sticky="nsew")
+        
+        summary_title = ctk.CTkLabel(
+            summary_frame,
+            text="Meal Program Summary",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        summary_title.pack(pady=10)
+        
+        # Overall meal summary
+        self.meal_overall_summary = ctk.CTkTextbox(
+            summary_frame,
+            width=220,
+            height=120
+        )
+        self.meal_overall_summary.pack(pady=10)
+        
+        # Additional meal program info
+        info_label = ctk.CTkLabel(
+            summary_frame,
+            text="Midday Meal Program\nTracking System",
+            font=ctk.CTkFont(size=12),
+            justify="center"
+        )
+        info_label.pack(pady=15)
+        
+        # Configure grid weights for top section
+        top_section.grid_columnconfigure(0, weight=1)
+        top_section.grid_columnconfigure(1, weight=1)
+        top_section.grid_columnconfigure(2, weight=1)
+        
+        # Bottom section - Detailed summary
+        bottom_section = ctk.CTkFrame(main_container)
+        bottom_section.pack(fill="x", padx=5, pady=(10, 5))
+        
+        detailed_title = ctk.CTkLabel(
+            bottom_section,
+            text="Today's Meal Attendance Summary",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        detailed_title.pack(pady=10)
+        
+        self.meal_summary_textbox = ctk.CTkTextbox(
+            bottom_section,
+            width=900,
+            height=120
+        )
+        self.meal_summary_textbox.pack(pady=10)
         
     def start_camera(self):
         """Initialize and start camera feed"""
@@ -324,14 +508,21 @@ class IntegratedAttendanceSystem:
                 
                 # Convert and resize for display
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = cv2.resize(frame, (480, 360))
+                frame = cv2.resize(frame, (350, 280))
                 
                 # Convert to CTk image
                 image = Image.fromarray(frame)
-                photo = ctk.CTkImage(light_image=image, dark_image=image, size=(480, 360))
+                photo = ctk.CTkImage(light_image=image, dark_image=image, size=(350, 280))
                 
-                if self.webcam_label and self.webcam_label.winfo_exists():
+                # Update all camera labels
+                if hasattr(self, 'webcam_label') and self.webcam_label and self.webcam_label.winfo_exists():
                     self.webcam_label.configure(image=photo)
+                    
+                if hasattr(self, 'class_webcam_label') and self.class_webcam_label and self.class_webcam_label.winfo_exists():
+                    self.class_webcam_label.configure(image=photo)
+                    
+                if hasattr(self, 'meal_webcam_label') and self.meal_webcam_label and self.meal_webcam_label.winfo_exists():
+                    self.meal_webcam_label.configure(image=photo)
                     
         # Schedule next update
         if self.camera_active:
@@ -438,18 +629,16 @@ class IntegratedAttendanceSystem:
         except Exception as e:
             util.msg_box('Error', f'Logout error: {str(e)}')
             
-    def mark_student_present(self):
-        """Mark student as present for today"""
+
+    
+    def _mark_regular_attendance(self, status):
+        """Mark regular class attendance"""
         try:
-            if not self.current_teacher:
-                util.msg_box('Error', 'No teacher logged in.')
-                return
-                
-            self.update_status("Marking student present...", "orange")
+            self.update_status(f"Marking student {status}...", "orange")
             
             if self.most_recent_capture_arr is None:
                 util.msg_box('Error', 'No camera feed detected.')
-                self.update_status("Mark present failed - No camera", "red")
+                self.update_status(f"Mark {status} failed - No camera", "red")
                 return
                 
             # Anti-spoofing check
@@ -464,31 +653,82 @@ class IntegratedAttendanceSystem:
                 
                 if student_name in ['unknown_person', 'no_persons_found']:
                     util.msg_box('Student Not Found', 'Student not recognized. Please register first or try again.')
-                    self.update_status("Mark present failed - Student not recognized", "red")
+                    self.update_status(f"Mark {status} failed - Student not recognized", "red")
                 else:
-                    # Check if student is already marked present today
-                    if self.db.is_student_present_today(student_name, self.current_teacher):
-                        util.msg_box('Already Present', f'{student_name} is already marked present for today.')
-                        self.update_status(f"Already present: {student_name}", "orange")
-                    else:
-                        # Mark attendance as present using new daily system
-                        if self.db.mark_student_present(student_name, self.current_teacher):
-                            util.msg_box('Present!', f'{student_name} marked present for today!')
-                            self.update_status(f"Marked present: {student_name}", "green")
-                            self.update_attendance_summary()
+                    if status == "present" and self.current_teacher:
+                        # Check if student is already marked present today
+                        if self.db.is_student_present_today(student_name, self.current_teacher):
+                            util.msg_box('Already Present', f'{student_name} is already marked present for today.')
+                            self.update_status(f"Already present: {student_name}", "orange")
                         else:
-                            util.msg_box('Error', 'Failed to mark present. Please try again.')
-                            self.update_status("Mark present failed - Database error", "red")
+                            # Mark attendance as present
+                            if self.db.mark_student_present(student_name, self.current_teacher):
+                                util.msg_box('Present!', f'{student_name} marked present for today!')
+                                self.update_status(f"Marked present: {student_name}", "green")
+                                self.update_attendance_summary()
+                                self.update_class_summary()
+                            else:
+                                util.msg_box('Error', 'Failed to mark present. Please try again.')
+                                self.update_status("Mark present failed - Database error", "red")
                         
             else:  # Spoofing detected
                 util.msg_box('Security Alert!', 'Spoofing detected! Please use real face.')
-                self.update_status("Mark present failed - Spoofing detected", "red")
+                self.update_status(f"Mark {status} failed - Spoofing detected", "red")
                 
         except Exception as e:
-            util.msg_box('Error', f'Mark present error: {str(e)}')
-            self.update_status(f"Mark present error: {e}", "red")
+            print(f"Error marking regular attendance: {e}")
+            self.update_status(f"Mark {status} error: {e}", "red")
+    
+    def _mark_meal_attendance(self, status):
+        """Mark meal attendance"""
+        try:
+            self.update_status(f"Marking meal {status}...", "orange")
             
-    def open_attendance_page(self):
+            if self.most_recent_capture_arr is None:
+                util.msg_box('Error', 'No camera feed detected.')
+                self.update_status(f"Mark meal {status} failed - No camera", "red")
+                return
+                
+            # Anti-spoofing check
+            label = simple_anti_spoof_test(
+                image=self.most_recent_capture_arr,
+                model_dir=self.model_dir,
+                device_id=0
+            )
+            
+            if label == 1:  # Real face detected
+                student_name = self.recognize_student(self.most_recent_capture_arr)
+                
+                if student_name in ['unknown_person', 'no_persons_found']:
+                    util.msg_box('Student Not Found', 'Student not recognized. Please register first or try again.')
+                    self.update_status(f"Mark meal {status} failed - Student not recognized", "red")
+                else:
+                    if status == "present" and self.current_teacher:
+                        # Check if student is already marked present for meal today
+                        if self.db.is_student_meal_present_today(student_name, self.current_teacher):
+                            util.msg_box('Already Present', f'{student_name} is already marked present for meal today.')
+                            self.update_status(f"Already meal present: {student_name}", "orange")
+                        else:
+                            # Mark meal attendance
+                            meal_status = "PRESENT" if status == "present" else "ABSENT"
+                            if self.db.mark_student_meal_present(student_name, self.current_teacher, meal_status):
+                                util.msg_box('Meal Attendance!', f'{student_name} marked {status} for meal!')
+                                self.update_status(f"Meal {status}: {student_name}", "green")
+                                self.update_attendance_summary()
+                                self.update_meal_summary()
+                            else:
+                                util.msg_box('Error', f'Failed to mark meal {status}. Please try again.')
+                                self.update_status(f"Mark meal {status} failed - Database error", "red")
+                        
+            else:  # Spoofing detected
+                util.msg_box('Security Alert!', 'Spoofing detected! Please use real face.')
+                self.update_status(f"Mark meal {status} failed - Spoofing detected", "red")
+                
+        except Exception as e:
+            print(f"Error marking meal attendance: {e}")
+            self.update_status(f"Mark meal {status} error: {e}", "red")
+            
+    def open_attendance_page(self, attendance_type="regular"):
         """Open the attendance log page in a separate window"""
         if not self.current_teacher:
             util.msg_box('Error', 'No teacher logged in.')
@@ -497,7 +737,14 @@ class IntegratedAttendanceSystem:
         # Create attendance window
         self.attendance_window = ctk.CTkToplevel(self.main_window)
         self.attendance_window.geometry("1000x700+200+100")
-        self.attendance_window.title(f"Attendance Log - {self.current_teacher}'s Class")
+        
+        if attendance_type == "meal":
+            self.attendance_window.title(f"Meal Attendance Log - {self.current_teacher}'s Class")
+            self.current_attendance_type = "meal"
+        else:
+            self.attendance_window.title(f"Class Attendance Log - {self.current_teacher}'s Class")
+            self.current_attendance_type = "regular"
+            
         self.attendance_window.grab_set()
         
         # Header
@@ -618,14 +865,16 @@ class IntegratedAttendanceSystem:
             print(f"Error setting up scrollable attendance table: {e}")
             
     def get_formatted_attendance_data(self):
-        """Get formatted attendance data for display"""
+        """Get formatted attendance data for display based on current attendance type"""
         try:
             if not self.current_teacher:
                 return []
                 
-            # Get daily attendance list (shows all students with their status)
+            # Get daily attendance list based on current attendance type
             today = datetime.date.today().isoformat()
-            daily_attendance = self.db.get_attendance_for_teacher(self.current_teacher, today)
+            attendance_type = getattr(self, 'current_attendance_type', 'regular')
+            db_attendance_type = 'class' if attendance_type == 'regular' else 'meal'
+            daily_attendance = self.db.get_attendance_for_teacher(self.current_teacher, today, db_attendance_type)
             
             formatted_data = []
             for record in daily_attendance:
@@ -675,11 +924,15 @@ class IntegratedAttendanceSystem:
             today = datetime.date.today().isoformat()
             yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
             
+            # Determine attendance type
+            attendance_type = getattr(self, 'current_attendance_type', 'regular')
+            db_attendance_type = 'class' if attendance_type == 'regular' else 'meal'
+            
             if filter_type == "today":
-                attendance_data = self.db.get_attendance_for_teacher(self.current_teacher, today)
+                attendance_data = self.db.get_attendance_for_teacher(self.current_teacher, today, db_attendance_type)
                 display_date = "Today"
             elif filter_type == "yesterday":
-                attendance_data = self.db.get_attendance_for_teacher(self.current_teacher, yesterday)
+                attendance_data = self.db.get_attendance_for_teacher(self.current_teacher, yesterday, db_attendance_type)
                 display_date = "Yesterday"
             else:
                 attendance_data = []
@@ -972,6 +1225,8 @@ class IntegratedAttendanceSystem:
                 util.msg_box('Success!', f'Student {name} registered successfully in {self.current_teacher}\'s class!')
                 self.register_student_window.destroy()
                 self.update_attendance_summary()
+                self.update_class_summary()
+                self.update_meal_summary()
             else:
                 util.msg_box('Error', f'Student {name} already exists in class or registration failed.')
                 
@@ -999,38 +1254,126 @@ class IntegratedAttendanceSystem:
             print(f"Error updating teachers list: {e}")
             
     def update_attendance_summary(self):
-        """Update attendance summary display"""
+        """Update attendance summary display in overall summaries"""
         try:
             if not self.current_teacher:
                 return
                 
             summary = self.get_present_absent_summary()
             
-            text = f"""Today's Class Summary:
+            text = f"""Overall Summary:
 
 Total Students: {summary['total_students']}
 Present Today: {summary['present_students']}
 Absent Today: {summary['absent_students']}
 Attendance: {summary['attendance_percentage']:.1f}%
 
-Class: {self.current_teacher}
-Date: {datetime.date.today()}"""
+Teacher: {self.current_teacher}
+Date: {datetime.date.today().strftime('%Y-%m-%d')}"""
 
-            if hasattr(self, 'summary_textbox') and self.summary_textbox.winfo_exists():
-                self.summary_textbox.delete("1.0", "end")
-                self.summary_textbox.insert("1.0", text)
+            # Update class tab overall summary
+            if hasattr(self, 'class_overall_summary') and self.class_overall_summary.winfo_exists():
+                self.class_overall_summary.delete("1.0", "end")
+                self.class_overall_summary.insert("1.0", text)
+            
+            # Update meal tab overall summary with meal-specific data
+            meal_summary = self.get_meal_attendance_summary()
+            meal_text = f"""Meal Summary:
+
+Total Students: {meal_summary.get('total_students', 0)}
+Had Meal: {meal_summary.get('meal_present', 0)}
+Missed Meal: {meal_summary.get('meal_absent', 0)}
+Participation: {meal_summary.get('meal_percentage', 0):.1f}%
+
+Teacher: {self.current_teacher}
+Date: {datetime.date.today().strftime('%Y-%m-%d')}"""
+            
+            if hasattr(self, 'meal_overall_summary') and self.meal_overall_summary.winfo_exists():
+                self.meal_overall_summary.delete("1.0", "end")
+                self.meal_overall_summary.insert("1.0", meal_text)
                 
         except Exception as e:
             print(f"Error updating attendance summary: {e}")
+    
+    def update_class_summary(self):
+        """Update class attendance summary in the tab"""
+        try:
+            if not self.current_teacher:
+                return
+                
+            summary = self.get_present_absent_summary()
+            
+            text = f"""Regular Class Attendance Summary:
+
+Total Students: {summary['total_students']}
+Present Today: {summary['present_students']}
+Absent Today: {summary['absent_students']}
+Attendance Rate: {summary['attendance_percentage']:.1f}%
+
+Teacher: {self.current_teacher}
+Date: {datetime.date.today()}"""
+
+            if hasattr(self, 'class_summary_textbox') and self.class_summary_textbox.winfo_exists():
+                self.class_summary_textbox.delete("1.0", "end")
+                self.class_summary_textbox.insert("1.0", text)
+                
+        except Exception as e:
+            print(f"Error updating class summary: {e}")
+    
+    def update_meal_summary(self):
+        """Update meal attendance summary in the tab"""
+        try:
+            if not self.current_teacher:
+                return
+                
+            # Get meal attendance data (using regular attendance for demo)
+            meal_summary = self.get_meal_attendance_summary()
+            
+            text = f"""Midday Meal Attendance Summary:
+
+Total Students: {meal_summary.get('total_students', 0)}
+Had Meal: {meal_summary.get('meal_present', 0)}
+Missed Meal: {meal_summary.get('meal_absent', 0)}
+Participation: {meal_summary.get('meal_percentage', 0):.1f}%
+
+Teacher: {self.current_teacher}
+Date: {datetime.date.today()}"""
+
+            if hasattr(self, 'meal_summary_textbox') and self.meal_summary_textbox.winfo_exists():
+                self.meal_summary_textbox.delete("1.0", "end")
+                self.meal_summary_textbox.insert("1.0", text)
+                
+        except Exception as e:
+            print(f"Error updating meal summary: {e}")
+    
+    def get_meal_attendance_summary(self):
+        """Get meal attendance summary"""
+        try:
+            if not self.current_teacher:
+                return {'total_students': 0, 'meal_present': 0, 'meal_absent': 0, 'meal_percentage': 0}
+            
+            # Use the meal attendance summary method
+            meal_summary = self.db.get_meal_attendance_summary(self.current_teacher)
+            
+            return {
+                'total_students': meal_summary['total_students'],
+                'meal_present': meal_summary['present_students'],
+                'meal_absent': meal_summary['absent_students'],
+                'meal_percentage': meal_summary['attendance_percentage']
+            }
+                
+        except Exception as e:
+            print(f"Error getting meal attendance summary: {e}")
+            return {'total_students': 0, 'meal_present': 0, 'meal_absent': 0, 'meal_percentage': 0}
             
     def get_present_absent_summary(self):
-        """Get today's present/absent summary for teacher's class"""
+        """Get today's present/absent summary for teacher's class (class attendance)"""
         try:
             if not self.current_teacher:
                 return {'total_students': 0, 'present_students': 0, 'absent_students': 0, 'attendance_percentage': 0}
             
-            # Use the new daily attendance summary method
-            return self.db.get_attendance_summary(self.current_teacher)
+            # Use the class attendance summary method
+            return self.db.get_class_attendance_summary(self.current_teacher)
                 
         except Exception as e:
             print(f"Error getting present/absent summary: {e}")
