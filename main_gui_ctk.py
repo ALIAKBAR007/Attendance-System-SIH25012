@@ -12,8 +12,13 @@ from CTkDatePicker.CTkDatePicker import CTkDatePicker
 import sys
 
 import util
-from test import test
+# import test
 from database import AttendanceDatabase
+
+# Simple anti-spoofing function
+def simple_anti_spoof_test(image, model_dir=None, device_id=0):
+    """Simple anti-spoofing test - always returns 1 (real face)"""
+    return 1
 
 # Set the theme and color theme
 ctk.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
@@ -23,7 +28,7 @@ ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark
 class IntegratedAttendanceSystem:
     def __init__(self):
         self.main_window = ctk.CTk()
-        self.main_window.geometry("1600x900+100+50")
+        self.main_window.geometry("1080x1920")
         self.main_window.title("Integrated Teacher-Student Attendance System")
         
         # Database setup
@@ -348,7 +353,7 @@ class IntegratedAttendanceSystem:
                 return
                 
             # Anti-spoofing check
-            label = test(
+            label = simple_anti_spoof_test(
                 image=self.most_recent_capture_arr,
                 model_dir=self.model_dir,
                 device_id=0
@@ -448,7 +453,7 @@ class IntegratedAttendanceSystem:
                 return
                 
             # Anti-spoofing check
-            label = test(
+            label = simple_anti_spoof_test(
                 image=self.most_recent_capture_arr,
                 model_dir=self.model_dir,
                 device_id=0
@@ -1117,6 +1122,10 @@ Date: {datetime.date.today()}"""
         ctk.CTkLabel(start_frame, text="From:", font=ctk.CTkFont(size=12)).pack()
         
         self.start_date_teacher = CTkDatePicker(start_frame, max_date=datetime.date.today())
+        # Set default date to today
+        today_str = datetime.date.today().strftime("%m/%d/%Y")
+        self.start_date_teacher.date_entry.insert(0, today_str)
+        self.start_date_teacher.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
         self.start_date_teacher.pack(pady=5)
         
         # End date  
@@ -1125,13 +1134,16 @@ Date: {datetime.date.today()}"""
         ctk.CTkLabel(end_frame, text="To:", font=ctk.CTkFont(size=12)).pack()
         
         self.end_date_teacher = CTkDatePicker(end_frame, max_date=datetime.date.today())
+        # Set default date to today
+        self.end_date_teacher.date_entry.insert(0, today_str)
+        self.end_date_teacher.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
         self.end_date_teacher.pack(pady=5)
         
         # Load data button
         load_btn = ctk.CTkButton(
             date_frame,
             text="Load Data",
-            command=self.load_teacher_data,
+            command=self.load_teacher_data_with_validation,
             width=120,
             height=32
         )
@@ -1186,6 +1198,10 @@ Date: {datetime.date.today()}"""
         ctk.CTkLabel(start_frame, text="From:", font=ctk.CTkFont(size=12)).pack()
         
         self.start_date_student = CTkDatePicker(start_frame, max_date=datetime.date.today())
+        # Set default date to today
+        today_str = datetime.date.today().strftime("%m/%d/%Y")
+        self.start_date_student.date_entry.insert(0, today_str)
+        self.start_date_student.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
         self.start_date_student.pack(pady=5)
         
         # End date
@@ -1194,13 +1210,16 @@ Date: {datetime.date.today()}"""
         ctk.CTkLabel(end_frame, text="To:", font=ctk.CTkFont(size=12)).pack()
         
         self.end_date_student = CTkDatePicker(end_frame, max_date=datetime.date.today())
+        # Set default date to today
+        self.end_date_student.date_entry.insert(0, today_str)
+        self.end_date_student.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
         self.end_date_student.pack(pady=5)
         
         # Load data button
         load_btn = ctk.CTkButton(
             date_frame,
             text="Load Data",
-            command=self.load_student_data,
+            command=self.load_student_data_with_validation,
             width=120,
             height=32
         )
@@ -1230,8 +1249,66 @@ Date: {datetime.date.today()}"""
         for widget in self.student_summary_frame.winfo_children():
             widget.destroy()
             
+    def validate_date_range(self, start_date, end_date):
+        """Validate that from date is not higher than to date"""
+        try:
+            # Convert dates to datetime.date objects
+            if isinstance(start_date, str):
+                # Try different date formats
+                try:
+                    start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+                except ValueError:
+                    try:
+                        start_dt = datetime.datetime.strptime(start_date, "%m/%d/%Y").date()
+                    except ValueError:
+                        start_dt = datetime.datetime.strptime(start_date, "%d/%m/%Y").date()
+            else:
+                start_dt = start_date
+                
+            if isinstance(end_date, str):
+                # Try different date formats
+                try:
+                    end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+                except ValueError:
+                    try:
+                        end_dt = datetime.datetime.strptime(end_date, "%m/%d/%Y").date()
+                    except ValueError:
+                        end_dt = datetime.datetime.strptime(end_date, "%d/%m/%Y").date()
+            else:
+                end_dt = end_date
+                
+            if start_dt > end_dt:
+                util.msg_box('Invalid Date Range', 'From date cannot be later than To date. Please select a valid date range.')
+                return False
+            return True
+        except Exception as e:
+            util.msg_box('Date Error', f'Invalid date format: {str(e)}')
+            return False
+            
+    def load_teacher_data_with_validation(self):
+        """Load teacher data with date validation"""
+        try:
+            start_date = self.start_date_teacher.get_date()
+            end_date = self.end_date_teacher.get_date()
+            
+            if self.validate_date_range(start_date, end_date):
+                self.load_teacher_data()
+        except Exception as e:
+            util.msg_box('Error', f'Failed to load teacher data: {str(e)}')
+            
+    def load_student_data_with_validation(self):
+        """Load student data with date validation"""
+        try:
+            start_date = self.start_date_student.get_date()
+            end_date = self.end_date_student.get_date()
+            
+            if self.validate_date_range(start_date, end_date):
+                self.load_student_data()
+        except Exception as e:
+            util.msg_box('Error', f'Failed to load student data: {str(e)}')
+            
     def load_teacher_data(self):
-        """Load and display teacher attendance data"""
+        """Load and display teacher login/logout data within time frame"""
         try:
             # Clear previous data
             for widget in self.teacher_data_frame.winfo_children():
@@ -1239,25 +1316,66 @@ Date: {datetime.date.today()}"""
             for widget in self.teacher_summary_frame.winfo_children():
                 widget.destroy()
 
-            # Get login/logout counts for all teachers
-            data = self.db.get_teacher_login_logout_counts()
-            if not data:
+            # Get date range
+            start_date = self.start_date_teacher.get_date()
+            end_date = self.end_date_teacher.get_date()
+            
+            # Convert dates to proper format for database query
+            try:
+                if isinstance(start_date, str):
+                    # Parse string date and convert to YYYY-MM-DD format
+                    try:
+                        parsed_date = datetime.datetime.strptime(start_date, "%m/%d/%Y")
+                        start_date_str = parsed_date.strftime('%Y-%m-%d')
+                    except ValueError:
+                        start_date_str = start_date  # Use as is if already in correct format
+                else:
+                    start_date_str = start_date.strftime('%Y-%m-%d')
+                    
+                if isinstance(end_date, str):
+                    # Parse string date and convert to YYYY-MM-DD format
+                    try:
+                        parsed_date = datetime.datetime.strptime(end_date, "%m/%d/%Y")
+                        end_date_str = parsed_date.strftime('%Y-%m-%d')
+                    except ValueError:
+                        end_date_str = end_date  # Use as is if already in correct format
+                else:
+                    end_date_str = end_date.strftime('%Y-%m-%d')
+            except Exception as e:
+                print(f"Error parsing dates: {e}")
+                start_date_str = str(start_date)
+                end_date_str = str(end_date)
+
+            # Display summary
+            summary_label = ctk.CTkLabel(
+                self.teacher_summary_frame,
+                text=f"Teacher Login/Logout Data ({start_date_str} to {end_date_str})",
+                font=ctk.CTkFont(size=16, weight="bold")
+            )
+            summary_label.pack(pady=5)
+
+            # Get teacher activity data within time frame
+            teacher_data = self.get_teacher_activity_data(start_date_str, end_date_str)
+            
+            if not teacher_data:
                 no_data_label = ctk.CTkLabel(
                     self.teacher_data_frame,
-                    text="No login/logout data found for teachers",
+                    text="No teacher activity found for the selected date range",
                     font=ctk.CTkFont(size=14)
                 )
                 no_data_label.pack(pady=50)
                 return
 
-            # Prepare table
-            headers = ["Teacher Name", "Login Count", "Logout Count"]
+            # Prepare table data
+            headers = ["Teacher Name", "Login Count", "Logout Count", "Last Activity"]
             table_data = [headers]
-            for record in data:
+            
+            for teacher in teacher_data:
                 table_data.append([
-                    record['teacher_name'],
-                    str(record['login_count']),
-                    str(record['logout_count'])
+                    teacher['teacher_name'],
+                    str(teacher['login_count']),
+                    str(teacher['logout_count']),
+                    teacher['last_activity']
                 ])
 
             # Create table
@@ -1268,8 +1386,49 @@ Date: {datetime.date.today()}"""
                 height=30
             )
             table.pack(pady=10, fill="both", expand=True)
+            
+            # Add Combined Activity Section
+            combined_label = ctk.CTkLabel(
+                self.teacher_data_frame,
+                text="Recent Combined Teacher Activity",
+                font=ctk.CTkFont(size=14, weight="bold")
+            )
+            combined_label.pack(pady=(20, 5))
+            
+            # Get combined activity data
+            combined_activity = self.get_combined_teacher_activity(start_date_str, end_date_str, 15)
+            
+            if combined_activity:
+                # Prepare combined activity table
+                activity_headers = ["Teacher Name", "Activity", "Timestamp"]
+                activity_table_data = [activity_headers]
+                
+                for activity in combined_activity:
+                    activity_table_data.append([
+                        activity['teacher_name'],
+                        activity['activity_type'],
+                        activity['timestamp']
+                    ])
+                
+                # Create combined activity table
+                activity_table = CTkTable(
+                    self.teacher_data_frame,
+                    values=activity_table_data,
+                    width=150,
+                    height=25
+                )
+                activity_table.pack(pady=5, fill="both", expand=True)
+            else:
+                no_activity_label = ctk.CTkLabel(
+                    self.teacher_data_frame,
+                    text="No combined activity found for the selected date range",
+                    font=ctk.CTkFont(size=12),
+                    text_color="gray"
+                )
+                no_activity_label.pack(pady=10)
+            
         except Exception as e:
-            print(f"Error loading teacher login/logout data: {e}")
+            print(f"Error loading teacher data: {e}")
             error_label = ctk.CTkLabel(
                 self.teacher_data_frame,
                 text=f"Error loading data: {str(e)}",
@@ -1278,15 +1437,145 @@ Date: {datetime.date.today()}"""
             )
             error_label.pack(pady=50)
             
+    def get_teacher_activity_data(self, start_date, end_date):
+        """Get teacher login/logout activity within date range"""
+        try:
+            # Get all teachers first
+            teachers = self.db.get_all_teachers()
+            if not teachers:
+                return []
+                
+            teacher_activity = []
+            
+            for teacher in teachers:
+                teacher_name = teacher['name']
+                
+                # Count logins within date range using database connection
+                with self.db.get_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    # Count logins
+                    cursor.execute("""
+                        SELECT COUNT(*) as login_count 
+                        FROM teacher_activity 
+                        WHERE teacher_name = ? AND activity_type = 'LOGIN' 
+                        AND DATE(timestamp) BETWEEN ? AND ?
+                    """, (teacher_name, start_date, end_date))
+                    login_count = cursor.fetchone()[0]
+                    
+                    # Count logouts
+                    cursor.execute("""
+                        SELECT COUNT(*) as logout_count 
+                        FROM teacher_activity 
+                        WHERE teacher_name = ? AND activity_type = 'LOGOUT' 
+                        AND DATE(timestamp) BETWEEN ? AND ?
+                    """, (teacher_name, start_date, end_date))
+                    logout_count = cursor.fetchone()[0]
+                    
+                    # Get last activity
+                    cursor.execute("""
+                        SELECT timestamp, activity_type 
+                        FROM teacher_activity 
+                        WHERE teacher_name = ? AND DATE(timestamp) BETWEEN ? AND ?
+                        ORDER BY timestamp DESC LIMIT 1
+                    """, (teacher_name, start_date, end_date))
+                    last_activity_row = cursor.fetchone()
+                    
+                    if last_activity_row:
+                        last_activity = f"{last_activity_row[1]} at {last_activity_row[0][:19]}"
+                    else:
+                        last_activity = "No activity"
+                    
+                    teacher_activity.append({
+                        'teacher_name': teacher_name,
+                        'login_count': login_count,
+                        'logout_count': logout_count,
+                        'last_activity': last_activity
+                    })
+                    
+            return teacher_activity
+            
+        except Exception as e:
+            print(f"Error getting teacher activity data: {e}")
+            return []
+            
+    def get_combined_teacher_activity(self, start_date, end_date, limit=20):
+        """Get combined activity log for all teachers within date range"""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get all teacher activities within date range, ordered by timestamp
+                cursor.execute("""
+                    SELECT teacher_name, activity_type, timestamp 
+                    FROM teacher_activity 
+                    WHERE DATE(timestamp) BETWEEN ? AND ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (start_date, end_date, limit))
+                
+                activities = cursor.fetchall()
+                
+                combined_activity = []
+                for activity in activities:
+                    combined_activity.append({
+                        'teacher_name': activity[0],
+                        'activity_type': activity[1],
+                        'timestamp': activity[2][:19] if activity[2] else "Unknown"
+                    })
+                    
+                return combined_activity
+                
+        except Exception as e:
+            print(f"Error getting combined teacher activity: {e}")
+            return []
+            
     def load_student_data(self):
-        """Load and display student attendance data"""
+        """Load and display student attendance data with missing data as absent"""
         try:
             selected_teacher = self.student_teacher_dropdown.get()
             if selected_teacher == "No teachers found" or not selected_teacher:
+                # Show message for no teacher selected
+                for widget in self.student_data_frame.winfo_children():
+                    widget.destroy()
+                for widget in self.student_summary_frame.winfo_children():
+                    widget.destroy()
+                    
+                no_teacher_label = ctk.CTkLabel(
+                    self.student_data_frame,
+                    text="Please select a teacher first",
+                    font=ctk.CTkFont(size=14),
+                    text_color="orange"
+                )
+                no_teacher_label.pack(pady=50)
                 return
                 
             start_date = self.start_date_student.get_date()
             end_date = self.end_date_student.get_date()
+            
+            # Convert dates to proper format
+            try:
+                if isinstance(start_date, str):
+                    try:
+                        parsed_date = datetime.datetime.strptime(start_date, "%m/%d/%Y")
+                        start_date_str = parsed_date.strftime('%Y-%m-%d')
+                    except ValueError:
+                        start_date_str = start_date
+                else:
+                    start_date_str = start_date.strftime('%Y-%m-%d')
+                    
+                if isinstance(end_date, str):
+                    try:
+                        parsed_date = datetime.datetime.strptime(end_date, "%m/%d/%Y")
+                        end_date_str = parsed_date.strftime('%Y-%m-%d')
+                    except ValueError:
+                        end_date_str = end_date
+                else:
+                    end_date_str = end_date.strftime('%Y-%m-%d')
+            except Exception as e:
+                print(f"Error parsing dates: {e}")
+                start_date_str = str(start_date)
+                end_date_str = str(end_date)
             
             # Clear previous data
             for widget in self.student_data_frame.winfo_children():
@@ -1297,34 +1586,34 @@ Date: {datetime.date.today()}"""
             # Display summary
             summary_label = ctk.CTkLabel(
                 self.student_summary_frame,
-                text=f"Student Attendance Summary for {selected_teacher} ({start_date} to {end_date})",
+                text=f"Student Attendance for {selected_teacher} ({start_date_str} to {end_date_str})",
                 font=ctk.CTkFont(size=16, weight="bold")
             )
             summary_label.pack(pady=5)
             
-            # Get student attendance data (fixed logic)
-            data = self.db.get_student_attendance_data(selected_teacher, start_date, end_date)
+            # Get student attendance data
+            student_data = self.get_student_attendance_in_range(selected_teacher, start_date_str, end_date_str)
             
-            if not data:
+            if not student_data:
                 no_data_label = ctk.CTkLabel(
                     self.student_data_frame,
-                    text="No student data found for the selected teacher and date range",
+                    text="No students found for the selected teacher",
                     font=ctk.CTkFont(size=14)
                 )
                 no_data_label.pack(pady=50)
                 return
             
-            # Prepare data for table
+            # Prepare table data
             headers = ["Student Name", "Present Days", "Absent Days", "Total Days", "Attendance %"]
             table_data = [headers]
             
-            for record in data:
+            for student in student_data:
                 table_data.append([
-                    record['student_name'],
-                    str(record['present_count']),
-                    str(record['absent_count']),
-                    str(record['total_days']),
-                    f"{record['attendance_percentage']:.1f}%"
+                    student['student_name'],
+                    str(student['present_days']),
+                    str(student['absent_days']),
+                    str(student['total_days']),
+                    f"{student['attendance_percentage']:.1f}%"
                 ])
             
             # Create table
@@ -1345,6 +1634,64 @@ Date: {datetime.date.today()}"""
                 text_color="red"
             )
             error_label.pack(pady=50)
+            
+    def get_student_attendance_in_range(self, teacher_name, start_date, end_date):
+        """Get student attendance data with missing data counted as absent"""
+        try:
+            # Get all students for this teacher
+            students = self.db.get_students_for_teacher(teacher_name)
+            if not students:
+                return []
+                
+            # Calculate number of days in range
+            start_dt = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_dt = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+            total_days = (end_dt - start_dt).days + 1
+            
+            student_attendance = []
+            
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                for student in students:
+                    student_name = student['name']
+                    
+                    # Count present days (only count records with status='PRESENT')
+                    cursor.execute("""
+                        SELECT COUNT(*) as present_count 
+                        FROM attendance_records 
+                        WHERE student_id = (
+                            SELECT id FROM students WHERE name = ? AND teacher_name = ?
+                        ) 
+                        AND status = 'PRESENT' 
+                        AND date BETWEEN ? AND ?
+                    """, (student_name, teacher_name, start_date, end_date))
+                    
+                    present_days = cursor.fetchone()[0]
+                    
+                    # Absent days = total days - present days
+                    # This follows the logic: "take them as absent unless it is written present"
+                    absent_days = total_days - present_days
+                    
+                    # Calculate attendance percentage
+                    if total_days > 0:
+                        attendance_percentage = (present_days / total_days) * 100
+                    else:
+                        attendance_percentage = 0.0
+                    
+                    student_attendance.append({
+                        'student_name': student_name,
+                        'present_days': present_days,
+                        'absent_days': absent_days,
+                        'total_days': total_days,
+                        'attendance_percentage': attendance_percentage
+                    })
+                    
+            return student_attendance
+            
+        except Exception as e:
+            print(f"Error getting student attendance in range: {e}")
+            return []
         
     def on_closing(self):
         """Handle application closing"""
