@@ -1397,7 +1397,7 @@ Date: {datetime.date.today()}"""
     def open_admin_panel(self):
         """Open comprehensive admin panel window with tabbed views"""
         self.admin_window = ctk.CTkToplevel(self.main_window)
-        self.admin_window.geometry("1100x700+200+100")
+        self.admin_window.geometry("1200x800+150+50")
         self.admin_window.title("Admin Panel - Attendance Management System")
         self.admin_window.grab_set()
         
@@ -1444,10 +1444,12 @@ Date: {datetime.date.today()}"""
         # Add modern tabs with icons
         self.admin_tabview.add("👨‍🏫 Teachers Analytics")
         self.admin_tabview.add("👨‍🎓 Students Analytics")
+        self.admin_tabview.add("📊 Data Export")
         
         # Setup tabs
         self.setup_teachers_tab()
         self.setup_students_tab()
+        self.setup_export_tab()
         
         # Set default tab
         self.admin_tabview.set("👨‍🏫 Teachers Analytics")
@@ -1765,6 +1767,179 @@ Date: {datetime.date.today()}"""
             fg_color=("white", "gray20")
         )
         self.student_data_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+    
+    def setup_export_tab(self):
+        """Setup the Data Export tab"""
+        export_tab = self.admin_tabview.tab("📊 Data Export")
+        
+        # Scrollable main container
+        main_container = ctk.CTkScrollableFrame(export_tab)
+        main_container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Header
+        header_frame = ctk.CTkFrame(
+            main_container,
+            corner_radius=10,
+            border_width=1,
+            fg_color=("gray95", "gray10")
+        )
+        header_frame.pack(fill="x", padx=5, pady=5)
+        
+        header_title = ctk.CTkLabel(
+            header_frame,
+            text="📊 Data Export to Excel",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=("blue", "light blue")
+        )
+        header_title.pack(pady=15)
+        
+        # Export controls container
+        controls_container = ctk.CTkFrame(main_container)
+        controls_container.pack(fill="x", padx=5, pady=10)
+        
+        # Date range selection
+        date_frame = ctk.CTkFrame(
+            controls_container,
+            corner_radius=8,
+            fg_color=("white", "gray20")
+        )
+        date_frame.pack(fill="x", padx=10, pady=10)
+        
+        date_title = ctk.CTkLabel(
+            date_frame,
+            text="📅 Select Date Range",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=("gray20", "gray80")
+        )
+        date_title.pack(pady=(10, 5))
+        
+        # Date controls
+        date_controls = ctk.CTkFrame(date_frame, fg_color="transparent")
+        date_controls.pack(pady=10)
+        
+        # Start date
+        start_frame = ctk.CTkFrame(date_controls, fg_color="transparent")
+        start_frame.pack(side="left", padx=10)
+        ctk.CTkLabel(
+            start_frame,
+            text="From:",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=("gray40", "gray70")
+        ).pack(pady=(0, 5))
+        
+        self.export_start_date = CTkDatePicker(start_frame, max_date=datetime.date.today())
+        today_str = datetime.date.today().strftime("%m/%d/%Y")
+        self.export_start_date.date_entry.insert(0, today_str)
+        self.export_start_date.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
+        self.export_start_date.pack(pady=5)
+        
+        # End date
+        end_frame = ctk.CTkFrame(date_controls, fg_color="transparent")
+        end_frame.pack(side="left", padx=10)
+        ctk.CTkLabel(
+            end_frame,
+            text="To:",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=("gray40", "gray70")
+        ).pack(pady=(0, 5))
+        
+        self.export_end_date = CTkDatePicker(end_frame, max_date=datetime.date.today())
+        self.export_end_date.date_entry.insert(0, today_str)
+        self.export_end_date.selected_date = datetime.datetime.combine(datetime.date.today(), datetime.time())
+        self.export_end_date.pack(pady=5)
+        
+        # Data type selection
+        checkbox_frame = ctk.CTkFrame(
+            controls_container,
+            corner_radius=8,
+            fg_color=("white", "gray20")
+        )
+        checkbox_frame.pack(fill="x", padx=10, pady=10)
+        
+        checkbox_title = ctk.CTkLabel(
+            checkbox_frame,
+            text="📋 Select Data Types to Export",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=("gray20", "gray80")
+        )
+        checkbox_title.pack(pady=(10, 5))
+        
+        # Checkbox container
+        checkbox_container = ctk.CTkFrame(checkbox_frame, fg_color="transparent")
+        checkbox_container.pack(pady=10)
+        
+        # Teacher data checkbox
+        self.export_teacher_data = ctk.CTkCheckBox(
+            checkbox_container,
+            text="Teacher Login/Logout Data",
+            font=ctk.CTkFont(size=12),
+            checkbox_width=20,
+            checkbox_height=20
+        )
+        self.export_teacher_data.pack(anchor="w", padx=20, pady=5)
+        
+        # Student data checkbox
+        self.export_student_data = ctk.CTkCheckBox(
+            checkbox_container,
+            text="Student Registration Data",
+            font=ctk.CTkFont(size=12),
+            checkbox_width=20,
+            checkbox_height=20
+        )
+        self.export_student_data.pack(anchor="w", padx=20, pady=5)
+        
+        # Class attendance checkbox
+        self.export_class_attendance = ctk.CTkCheckBox(
+            checkbox_container,
+            text="Class Attendance Data",
+            font=ctk.CTkFont(size=12),
+            checkbox_width=20,
+            checkbox_height=20
+        )
+        self.export_class_attendance.pack(anchor="w", padx=20, pady=5)
+        
+        # Meal attendance checkbox
+        self.export_meal_attendance = ctk.CTkCheckBox(
+            checkbox_container,
+            text="Midday Meal Attendance Data",
+            font=ctk.CTkFont(size=12),
+            checkbox_width=20,
+            checkbox_height=20
+        )
+        self.export_meal_attendance.pack(anchor="w", padx=20, pady=5)
+        
+        # Export Actions Section - Make it more prominent
+        export_actions_frame = ctk.CTkFrame(
+            controls_container,
+            corner_radius=8,
+            fg_color=("white", "gray20"),
+            border_width=2,
+            border_color=("#2fa572", "#2fa572")
+        )
+        export_actions_frame.pack(fill="x", padx=10, pady=20)
+        
+        # Export button - Make it more visible
+        self.export_button = ctk.CTkButton(
+            export_actions_frame,
+            text="EXPORT TO EXCEL FILES",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            width=400,
+            height=60,
+            command=self.export_data_to_excel,
+            fg_color=("#2fa572", "#2fa572"),
+            hover_color=("#207244", "#207244"),
+            corner_radius=10
+        )
+        self.export_button.pack(pady=20)
+        
+        # Status label
+        self.export_status_label = ctk.CTkLabel(
+            export_actions_frame,
+            text="Files will be exported to your Downloads folder",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color=("#2fa572", "#2fa572")
+        )
+        self.export_status_label.pack(pady=(0, 15))
     
     def on_teacher_selected(self, choice):
         """Handle teacher selection in teachers tab"""
@@ -2267,6 +2442,553 @@ Date: {datetime.date.today()}"""
         except Exception as e:
             print(f"Error getting student attendance in range: {e}")
             return []
+    
+    def export_data_to_excel(self):
+        """Export selected data types to Excel files"""
+        try:
+            # Validate date range
+            try:
+                if hasattr(self.export_start_date, 'selected_date') and self.export_start_date.selected_date:
+                    start_date = self.export_start_date.selected_date.date()
+                else:
+                    util.msg_box('Error', 'Please select a valid start date.')
+                    return
+                    
+                if hasattr(self.export_end_date, 'selected_date') and self.export_end_date.selected_date:
+                    end_date = self.export_end_date.selected_date.date()
+                else:
+                    util.msg_box('Error', 'Please select a valid end date.')
+                    return
+            except Exception as e:
+                util.msg_box('Error', f'Please select valid start and end dates. Error: {str(e)}')
+                return
+            
+            if not self.validate_date_range(start_date, end_date):
+                return
+            
+            # Check if at least one checkbox is selected
+            export_options = {
+                'teacher': self.export_teacher_data.get(),
+                'student': self.export_student_data.get(),
+                'class_attendance': self.export_class_attendance.get(),
+                'meal_attendance': self.export_meal_attendance.get()
+            }
+            
+            if not any(export_options.values()):
+                util.msg_box('Error', 'Please select at least one data type to export.')
+                return
+            
+            # Update status
+            self.export_status_label.configure(text="Exporting data, please wait...")
+            self.export_button.configure(state="disabled")
+            self.main_window.update()
+            
+            # Get downloads folder path with date range
+            start_date_str = start_date.isoformat()
+            end_date_str = end_date.isoformat()
+            folder_name = f"Attendance_Export_{start_date_str}_to_{end_date_str}"
+            downloads_path = os.path.join(os.path.expanduser("~"), "Downloads", folder_name)
+            os.makedirs(downloads_path, exist_ok=True)
+            
+            exported_files = []
+            
+            # Export teacher data
+            if export_options['teacher']:
+                filename = self.export_teacher_data_to_excel(downloads_path, start_date_str, end_date_str)
+                if filename:
+                    exported_files.append(filename)
+            
+            # Export student data
+            if export_options['student']:
+                filename = self.export_student_data_to_excel(downloads_path, start_date_str, end_date_str)
+                if filename:
+                    exported_files.append(filename)
+            
+            # Export class attendance data
+            if export_options['class_attendance']:
+                filename = self.export_class_attendance_to_excel(downloads_path, start_date_str, end_date_str)
+                if filename:
+                    exported_files.append(filename)
+            
+            # Export meal attendance data
+            if export_options['meal_attendance']:
+                filename = self.export_meal_attendance_to_excel(downloads_path, start_date_str, end_date_str)
+                if filename:
+                    exported_files.append(filename)
+            
+            # Show success message
+            if exported_files:
+                files_list = '\n'.join([f"• {os.path.basename(f)}" for f in exported_files])
+                util.msg_box('Export Successful!', 
+                           f'Data exported successfully!\n\nFiles created:\n{files_list}\n\nLocation: {downloads_path}')
+                self.export_status_label.configure(text=f"{len(exported_files)} file(s) exported successfully to Downloads folder")
+            else:
+                util.msg_box('Export Failed', 'No data was exported. Please check your selections and try again.')
+                self.export_status_label.configure(text="Export failed - No data found")
+            
+        except Exception as e:
+            util.msg_box('Export Error', f'An error occurred during export: {str(e)}')
+            self.export_status_label.configure(text=f"Export error: {str(e)}")
+            print(f"Export error: {e}")
+        finally:
+            self.export_button.configure(state="normal")
+    
+    def export_teacher_data_to_excel(self, downloads_path, start_date, end_date):
+        """Export teacher login/logout data to Excel"""
+        try:
+            import pandas as pd
+            
+            # Get teacher activity data
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT teacher_name, activity_type, timestamp
+                    FROM teacher_activity
+                    WHERE DATE(timestamp) BETWEEN ? AND ?
+                    ORDER BY timestamp DESC
+                """, (start_date, end_date))
+                
+                data = cursor.fetchall()
+            
+            if not data:
+                return None
+            
+            # Create DataFrame
+            df = pd.DataFrame(data, columns=['Teacher Name', 'Activity Type', 'Timestamp'])
+            
+            # Format timestamp
+            df['Date'] = pd.to_datetime(df['Timestamp']).dt.date
+            df['Time'] = pd.to_datetime(df['Timestamp']).dt.time
+            
+            # Reorder columns
+            df = df[['Teacher Name', 'Activity Type', 'Date', 'Time', 'Timestamp']]
+            
+            # Save to Excel
+            filename = os.path.join(downloads_path, f"Teacher_Activity_{start_date}_to_{end_date}.xlsx")
+            df.to_excel(filename, index=False, sheet_name='Teacher Activity')
+            
+            return filename
+            
+        except ImportError:
+            util.msg_box('Missing Dependency', 'pandas library is required for Excel export. Please install it using: pip install pandas openpyxl')
+            return None
+        except Exception as e:
+            print(f"Error exporting teacher data: {e}")
+            return None
+    
+    def export_student_data_to_excel(self, downloads_path, start_date, end_date):
+        """Export student registration data to Excel (organized by class)"""
+        try:
+            import pandas as pd
+            
+            # Get all students with their teachers
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT teacher_name, name, created_at
+                    FROM students
+                    WHERE DATE(created_at) BETWEEN ? AND ?
+                    ORDER BY teacher_name, name
+                """, (start_date, end_date))
+                
+                data = cursor.fetchall()
+            
+            if not data:
+                return None
+            
+            # Create Excel file with multiple sheets (one per teacher)
+            filename = os.path.join(downloads_path, f"Student_Registration_{start_date}_to_{end_date}.xlsx")
+            
+            with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+                # Group by teacher
+                teacher_groups = {}
+                for teacher_name, student_name, created_at in data:
+                    if teacher_name not in teacher_groups:
+                        teacher_groups[teacher_name] = []
+                    teacher_groups[teacher_name].append({
+                        'Student Name': student_name,
+                        'Registration Date': created_at,
+                        'Class Teacher': teacher_name
+                    })
+                
+                # Create sheet for each teacher
+                for teacher_name, students in teacher_groups.items():
+                    df = pd.DataFrame(students)
+                    sheet_name = teacher_name[:30]  # Excel sheet name limit
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+                
+                # Create summary sheet
+                all_students = []
+                for teacher_name, students in teacher_groups.items():
+                    all_students.extend(students)
+                
+                if all_students:
+                    summary_df = pd.DataFrame(all_students)
+                    summary_df = summary_df.sort_values(['Class Teacher', 'Student Name'])
+                    summary_df.to_excel(writer, sheet_name='All Students Summary', index=False)
+            
+            return filename
+            
+        except ImportError:
+            util.msg_box('Missing Dependency', 'pandas library is required for Excel export. Please install it using: pip install pandas openpyxl')
+            return None
+        except Exception as e:
+            print(f"Error exporting student data: {e}")
+            return None
+    
+    def export_class_attendance_to_excel(self, downloads_path, start_date, end_date):
+        """Export comprehensive class attendance data showing all teachers and students"""
+        try:
+            import pandas as pd
+            
+            # Get all teachers and their students
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get all teachers
+                cursor.execute("SELECT DISTINCT teacher_name FROM students ORDER BY teacher_name")
+                teachers = [row[0] for row in cursor.fetchall()]
+                
+                if not teachers:
+                    return None
+                
+                # Get all unique dates in the range
+                cursor.execute("""
+                    SELECT DISTINCT date FROM attendance_records 
+                    WHERE attendance_type = 'class' AND DATE(date) BETWEEN ? AND ?
+                    ORDER BY date
+                """, (start_date, end_date))
+                dates = [row[0] for row in cursor.fetchall()]
+                
+                if not dates:
+                    return None
+                
+                # Get all students for each teacher
+                teacher_students = {}
+                for teacher in teachers:
+                    cursor.execute("""
+                        SELECT name FROM students 
+                        WHERE teacher_name = ? 
+                        ORDER BY name
+                    """, (teacher,))
+                    teacher_students[teacher] = [row[0] for row in cursor.fetchall()]
+                
+                # Get attendance data
+                cursor.execute("""
+                    SELECT s.teacher_name, a.student_name, a.date, a.status
+                    FROM attendance_records a
+                    JOIN students s ON a.student_name = s.name AND a.class_teacher = s.teacher_name
+                    WHERE a.attendance_type = 'class' 
+                    AND DATE(a.date) BETWEEN ? AND ?
+                """, (start_date, end_date))
+                
+                attendance_data = {}
+                for teacher_name, student_name, date, status in cursor.fetchall():
+                    key = (teacher_name, student_name, date)
+                    attendance_data[key] = status
+            
+            # Create comprehensive Excel file
+            filename = os.path.join(downloads_path, f"Class_Attendance_Comprehensive_{start_date}_to_{end_date}.xlsx")
+            
+            with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+                # Create comprehensive attendance sheet
+                comprehensive_data = []
+                
+                # Create header row with teacher sections
+                header_row = ['Date']
+                for i, teacher in enumerate(teachers):
+                    if i > 0:
+                        header_row.append('')  # Empty column for spacing
+                    # Add columns for this teacher (Student, Present, Absent, Total)
+                    header_row.extend([f'{teacher} - Student', f'{teacher} - Present', f'{teacher} - Absent', f'{teacher} - Total'])
+                
+                comprehensive_data.append(header_row)
+                
+                # Create data rows for each date
+                for date in dates:
+                    row = [date]
+                    
+                    for i, teacher in enumerate(teachers):
+                        if i > 0:
+                            row.append('')  # Empty column for spacing
+                        
+                        students = teacher_students.get(teacher, [])
+                        present_count = 0
+                        absent_count = 0
+                        
+                        # Count attendance for this teacher on this date
+                        for student in students:
+                            status = attendance_data.get((teacher, student, date), 'No Record')
+                            if status == 'present':
+                                present_count += 1
+                            elif status == 'absent':
+                                absent_count += 1
+                        
+                        total_students = len(students)
+                        
+                        row.extend([
+                            f'{len(students)} students',
+                            str(present_count),
+                            str(absent_count),
+                            str(total_students)
+                        ])
+                    
+                    comprehensive_data.append(row)
+                
+                # Convert to DataFrame and save
+                df_comprehensive = pd.DataFrame(comprehensive_data[1:], columns=comprehensive_data[0])
+                df_comprehensive.to_excel(writer, sheet_name='Comprehensive Attendance', index=False)
+                
+                # Create detailed student-by-student sheet
+                detailed_data = []
+                
+                # Create detailed header
+                detailed_header = ['Date', 'Time']
+                for i, teacher in enumerate(teachers):
+                    if i > 0:
+                        detailed_header.append('')  # Spacing column
+                    students = teacher_students.get(teacher, [])
+                    for student in students:
+                        detailed_header.append(f'{teacher} - {student}')
+                
+                detailed_data.append(detailed_header)
+                
+                # Create detailed data rows
+                for date in dates:
+                    row = [date, '']  # Date and empty time column
+                    
+                    for i, teacher in enumerate(teachers):
+                        if i > 0:
+                            row.append('')  # Spacing column
+                        
+                        students = teacher_students.get(teacher, [])
+                        for student in students:
+                            status = attendance_data.get((teacher, student, date), 'No Record')
+                            # Use simple indicators: P = Present, A = Absent, - = No Record
+                            if status == 'present':
+                                row.append('P')
+                            elif status == 'absent':
+                                row.append('A')
+                            else:
+                                row.append('-')
+                    
+                    detailed_data.append(row)
+                
+                # Convert detailed data to DataFrame and save
+                df_detailed = pd.DataFrame(detailed_data[1:], columns=detailed_data[0])
+                df_detailed.to_excel(writer, sheet_name='Student Details', index=False)
+                
+                # Create summary sheet for each teacher
+                for teacher in teachers:
+                    teacher_data = []
+                    students = teacher_students.get(teacher, [])
+                    
+                    # Create teacher-specific data
+                    teacher_header = ['Date'] + students
+                    teacher_data.append(teacher_header)
+                    
+                    for date in dates:
+                        row = [date]
+                        for student in students:
+                            status = attendance_data.get((teacher, student, date), 'No Record')
+                            if status == 'present':
+                                row.append('Present')
+                            elif status == 'absent':
+                                row.append('Absent')
+                            else:
+                                row.append('No Record')
+                        teacher_data.append(row)
+                    
+                    if teacher_data and len(teacher_data) > 1:  # Has data besides header
+                        df_teacher = pd.DataFrame(teacher_data[1:], columns=teacher_data[0])
+                        sheet_name = f"{teacher}"[:30]  # Excel sheet name limit
+                        df_teacher.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+            return filename
+            
+        except ImportError:
+            util.msg_box('Missing Dependency', 'pandas library is required for Excel export. Please install it using: pip install pandas openpyxl')
+            return None
+        except Exception as e:
+            print(f"Error exporting comprehensive class attendance data: {e}")
+            return None
+    
+    def export_meal_attendance_to_excel(self, downloads_path, start_date, end_date):
+        """Export comprehensive meal attendance data showing all teachers and students"""
+        try:
+            import pandas as pd
+            
+            # Get all teachers and their students
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get all teachers
+                cursor.execute("SELECT DISTINCT teacher_name FROM students ORDER BY teacher_name")
+                teachers = [row[0] for row in cursor.fetchall()]
+                
+                if not teachers:
+                    return None
+                
+                # Get all unique dates in the range
+                cursor.execute("""
+                    SELECT DISTINCT date FROM attendance_records 
+                    WHERE attendance_type = 'meal' AND DATE(date) BETWEEN ? AND ?
+                    ORDER BY date
+                """, (start_date, end_date))
+                dates = [row[0] for row in cursor.fetchall()]
+                
+                if not dates:
+                    return None
+                
+                # Get all students for each teacher
+                teacher_students = {}
+                for teacher in teachers:
+                    cursor.execute("""
+                        SELECT name FROM students 
+                        WHERE teacher_name = ? 
+                        ORDER BY name
+                    """, (teacher,))
+                    teacher_students[teacher] = [row[0] for row in cursor.fetchall()]
+                
+                # Get meal attendance data
+                cursor.execute("""
+                    SELECT s.teacher_name, a.student_name, a.date, a.status
+                    FROM attendance_records a
+                    JOIN students s ON a.student_name = s.name AND a.class_teacher = s.teacher_name
+                    WHERE a.attendance_type = 'meal' 
+                    AND DATE(a.date) BETWEEN ? AND ?
+                """, (start_date, end_date))
+                
+                attendance_data = {}
+                for teacher_name, student_name, date, status in cursor.fetchall():
+                    key = (teacher_name, student_name, date)
+                    attendance_data[key] = status
+            
+            # Create comprehensive Excel file
+            filename = os.path.join(downloads_path, f"Meal_Attendance_Comprehensive_{start_date}_to_{end_date}.xlsx")
+            
+            with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+                # Create comprehensive attendance sheet
+                comprehensive_data = []
+                
+                # Create header row with teacher sections
+                header_row = ['Date']
+                for i, teacher in enumerate(teachers):
+                    if i > 0:
+                        header_row.append('')  # Empty column for spacing
+                    # Add columns for this teacher (Student, Present, Absent, Total)
+                    header_row.extend([f'{teacher} - Student', f'{teacher} - Present', f'{teacher} - Absent', f'{teacher} - Total'])
+                
+                comprehensive_data.append(header_row)
+                
+                # Create data rows for each date
+                for date in dates:
+                    row = [date]
+                    
+                    for i, teacher in enumerate(teachers):
+                        if i > 0:
+                            row.append('')  # Empty column for spacing
+                        
+                        students = teacher_students.get(teacher, [])
+                        present_count = 0
+                        absent_count = 0
+                        
+                        # Count attendance for this teacher on this date
+                        for student in students:
+                            status = attendance_data.get((teacher, student, date), 'No Record')
+                            if status == 'present':
+                                present_count += 1
+                            elif status == 'absent':
+                                absent_count += 1
+                        
+                        total_students = len(students)
+                        
+                        row.extend([
+                            f'{len(students)} students',
+                            str(present_count),
+                            str(absent_count),
+                            str(total_students)
+                        ])
+                    
+                    comprehensive_data.append(row)
+                
+                # Convert to DataFrame and save
+                df_comprehensive = pd.DataFrame(comprehensive_data[1:], columns=comprehensive_data[0])
+                df_comprehensive.to_excel(writer, sheet_name='Comprehensive Meal Attendance', index=False)
+                
+                # Create detailed student-by-student sheet
+                detailed_data = []
+                
+                # Create detailed header
+                detailed_header = ['Date', 'Time']
+                for i, teacher in enumerate(teachers):
+                    if i > 0:
+                        detailed_header.append('')  # Spacing column
+                    students = teacher_students.get(teacher, [])
+                    for student in students:
+                        detailed_header.append(f'{teacher} - {student}')
+                
+                detailed_data.append(detailed_header)
+                
+                # Create detailed data rows
+                for date in dates:
+                    row = [date, '']  # Date and empty time column
+                    
+                    for i, teacher in enumerate(teachers):
+                        if i > 0:
+                            row.append('')  # Spacing column
+                        
+                        students = teacher_students.get(teacher, [])
+                        for student in students:
+                            status = attendance_data.get((teacher, student, date), 'No Record')
+                            # Use simple indicators: P = Present, A = Absent, - = No Record
+                            if status == 'present':
+                                row.append('P')
+                            elif status == 'absent':
+                                row.append('A')
+                            else:
+                                row.append('-')
+                    
+                    detailed_data.append(row)
+                
+                # Convert detailed data to DataFrame and save
+                df_detailed = pd.DataFrame(detailed_data[1:], columns=detailed_data[0])
+                df_detailed.to_excel(writer, sheet_name='Student Details', index=False)
+                
+                # Create summary sheet for each teacher
+                for teacher in teachers:
+                    teacher_data = []
+                    students = teacher_students.get(teacher, [])
+                    
+                    # Create teacher-specific data
+                    teacher_header = ['Date'] + students
+                    teacher_data.append(teacher_header)
+                    
+                    for date in dates:
+                        row = [date]
+                        for student in students:
+                            status = attendance_data.get((teacher, student, date), 'No Record')
+                            if status == 'present':
+                                row.append('Present')
+                            elif status == 'absent':
+                                row.append('Absent')
+                            else:
+                                row.append('No Record')
+                        teacher_data.append(row)
+                    
+                    if teacher_data and len(teacher_data) > 1:  # Has data besides header
+                        df_teacher = pd.DataFrame(teacher_data[1:], columns=teacher_data[0])
+                        sheet_name = f"{teacher}"[:30]  # Excel sheet name limit
+                        df_teacher.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+            return filename
+            
+        except ImportError:
+            util.msg_box('Missing Dependency', 'pandas library is required for Excel export. Please install it using: pip install pandas openpyxl')
+            return None
+        except Exception as e:
+            print(f"Error exporting comprehensive meal attendance data: {e}")
+            return None
         
     def on_closing(self):
         """Handle application closing"""
