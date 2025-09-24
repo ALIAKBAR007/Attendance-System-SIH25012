@@ -7,6 +7,8 @@ from PIL import Image, ImageTk
 import face_recognition
 import threading
 from tkinter import messagebox
+import tkinter as tk
+from CTkDatePicker.CTkDatePicker import CTkDatePicker
 import sys
 
 import util
@@ -1045,42 +1047,304 @@ Date: {datetime.date.today()}"""
             util.msg_box('Access Denied', 'Incorrect admin password.')
             
     def open_admin_panel(self):
-        """Open admin panel window"""
-        admin_window = ctk.CTkToplevel(self.main_window)
-        admin_window.geometry("800x600+300+100")
-        admin_window.title("Admin Panel")
-        admin_window.grab_set()
+        """Open comprehensive admin panel window with tabbed views"""
+        self.admin_window = ctk.CTkToplevel(self.main_window)
+        self.admin_window.geometry("1200x800+200+100")
+        self.admin_window.title("Admin Panel - Attendance Management System")
+        self.admin_window.grab_set()
         
         # Title
         title_label = ctk.CTkLabel(
-            admin_window,
+            self.admin_window,
             text="Administrator Panel",
             font=ctk.CTkFont(size=28, weight="bold")
         )
-        title_label.pack(pady=30)
+        title_label.pack(pady=20)
         
-        # Placeholder content
-        content_frame = ctk.CTkFrame(admin_window)
-        content_frame.pack(fill="both", expand=True, padx=40, pady=20)
+        # Create tab view
+        self.admin_tabview = ctk.CTkTabview(self.admin_window, width=1150, height=700)
+        self.admin_tabview.pack(fill="both", expand=True, padx=20, pady=10)
         
-        placeholder_label = ctk.CTkLabel(
-            content_frame,
-            text="Admin Panel Features\n(To be implemented)\n\n• Manage Teachers\n• Manage Students\n• View Reports\n• System Settings\n• Export Data",
-            font=ctk.CTkFont(size=18),
-            justify="left"
+        # Add tabs
+        self.admin_tabview.add("Teachers Data")
+        self.admin_tabview.add("Students Data")
+        
+        # Setup tabs
+        self.setup_teachers_tab()
+        self.setup_students_tab()
+        
+        # Set default tab
+        self.admin_tabview.set("Teachers Data")
+        
+    def setup_teachers_tab(self):
+        """Setup the Teachers Data tab"""
+        teachers_tab = self.admin_tabview.tab("Teachers Data")
+        
+        # Control frame
+        control_frame = ctk.CTkFrame(teachers_tab)
+        control_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Teacher selection
+        teacher_frame = ctk.CTkFrame(control_frame)
+        teacher_frame.pack(side="left", fill="x", expand=True, padx=5, pady=10)
+        
+        ctk.CTkLabel(teacher_frame, text="Select Teacher:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=5)
+        
+        # Get all teachers for dropdown
+        teachers = self.db.get_all_teachers()
+        teacher_names = [teacher['name'] for teacher in teachers] if teachers else ["No teachers found"]
+        
+        self.teacher_dropdown = ctk.CTkComboBox(
+            teacher_frame,
+            values=teacher_names,
+            width=200,
+            command=self.on_teacher_selected
         )
-        placeholder_label.pack(pady=100)
+        self.teacher_dropdown.pack(pady=5)
         
-        # Close button
-        close_btn = ctk.CTkButton(
-            admin_window,
-            text="Close",
-            font=ctk.CTkFont(size=16),
-            width=100,
-            height=40,
-            command=admin_window.destroy
+        # Date range frame
+        date_frame = ctk.CTkFrame(control_frame)
+        date_frame.pack(side="right", padx=5, pady=10)
+        
+        ctk.CTkLabel(date_frame, text="Date Range:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=5)
+        
+        date_controls = ctk.CTkFrame(date_frame)
+        date_controls.pack(pady=5)
+        
+        # Start date
+        start_frame = ctk.CTkFrame(date_controls)
+        start_frame.pack(side="left", padx=5)
+        ctk.CTkLabel(start_frame, text="From:", font=ctk.CTkFont(size=12)).pack()
+        
+        self.start_date_teacher = CTkDatePicker(start_frame, max_date=datetime.date.today())
+        self.start_date_teacher.pack(pady=5)
+        
+        # End date  
+        end_frame = ctk.CTkFrame(date_controls)
+        end_frame.pack(side="left", padx=5)
+        ctk.CTkLabel(end_frame, text="To:", font=ctk.CTkFont(size=12)).pack()
+        
+        self.end_date_teacher = CTkDatePicker(end_frame, max_date=datetime.date.today())
+        self.end_date_teacher.pack(pady=5)
+        
+        # Load data button
+        load_btn = ctk.CTkButton(
+            date_frame,
+            text="Load Data",
+            command=self.load_teacher_data,
+            width=120,
+            height=32
         )
-        close_btn.pack(pady=20)
+        load_btn.pack(pady=10)
+        
+        # Summary frame
+        self.teacher_summary_frame = ctk.CTkFrame(teachers_tab)
+        self.teacher_summary_frame.pack(fill="x", padx=10, pady=5)
+        
+        # Data display frame
+        self.teacher_data_frame = ctk.CTkScrollableFrame(teachers_tab, height=400)
+        self.teacher_data_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+    def setup_students_tab(self):
+        """Setup the Students Data tab"""
+        students_tab = self.admin_tabview.tab("Students Data")
+        
+        # Control frame
+        control_frame = ctk.CTkFrame(students_tab)
+        control_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Teacher selection for students
+        teacher_frame = ctk.CTkFrame(control_frame)
+        teacher_frame.pack(side="left", fill="x", expand=True, padx=5, pady=10)
+        
+        ctk.CTkLabel(teacher_frame, text="Select Teacher:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=5)
+        
+        # Get all teachers for dropdown
+        teachers = self.db.get_all_teachers()
+        teacher_names = [teacher['name'] for teacher in teachers] if teachers else ["No teachers found"]
+        
+        self.student_teacher_dropdown = ctk.CTkComboBox(
+            teacher_frame,
+            values=teacher_names,
+            width=200,
+            command=self.on_student_teacher_selected
+        )
+        self.student_teacher_dropdown.pack(pady=5)
+        
+        # Date range frame
+        date_frame = ctk.CTkFrame(control_frame)
+        date_frame.pack(side="right", padx=5, pady=10)
+        
+        ctk.CTkLabel(date_frame, text="Date Range:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=5)
+        
+        date_controls = ctk.CTkFrame(date_frame)
+        date_controls.pack(pady=5)
+        
+        # Start date
+        start_frame = ctk.CTkFrame(date_controls)
+        start_frame.pack(side="left", padx=5)
+        ctk.CTkLabel(start_frame, text="From:", font=ctk.CTkFont(size=12)).pack()
+        
+        self.start_date_student = CTkDatePicker(start_frame, max_date=datetime.date.today())
+        self.start_date_student.pack(pady=5)
+        
+        # End date
+        end_frame = ctk.CTkFrame(date_controls)
+        end_frame.pack(side="left", padx=5)
+        ctk.CTkLabel(end_frame, text="To:", font=ctk.CTkFont(size=12)).pack()
+        
+        self.end_date_student = CTkDatePicker(end_frame, max_date=datetime.date.today())
+        self.end_date_student.pack(pady=5)
+        
+        # Load data button
+        load_btn = ctk.CTkButton(
+            date_frame,
+            text="Load Data",
+            command=self.load_student_data,
+            width=120,
+            height=32
+        )
+        load_btn.pack(pady=10)
+        
+        # Summary frame
+        self.student_summary_frame = ctk.CTkFrame(students_tab)
+        self.student_summary_frame.pack(fill="x", padx=10, pady=5)
+        
+        # Data display frame
+        self.student_data_frame = ctk.CTkScrollableFrame(students_tab, height=400)
+        self.student_data_frame.pack(fill="both", expand=True, padx=10, pady=10)
+    
+    def on_teacher_selected(self, choice):
+        """Handle teacher selection in teachers tab"""
+        # Clear previous data when teacher changes
+        for widget in self.teacher_data_frame.winfo_children():
+            widget.destroy()
+        for widget in self.teacher_summary_frame.winfo_children():
+            widget.destroy()
+            
+    def on_student_teacher_selected(self, choice):
+        """Handle teacher selection in students tab"""
+        # Clear previous data when teacher changes
+        for widget in self.student_data_frame.winfo_children():
+            widget.destroy()
+        for widget in self.student_summary_frame.winfo_children():
+            widget.destroy()
+            
+    def load_teacher_data(self):
+        """Load and display teacher attendance data"""
+        try:
+            # Clear previous data
+            for widget in self.teacher_data_frame.winfo_children():
+                widget.destroy()
+            for widget in self.teacher_summary_frame.winfo_children():
+                widget.destroy()
+
+            # Get login/logout counts for all teachers
+            data = self.db.get_teacher_login_logout_counts()
+            if not data:
+                no_data_label = ctk.CTkLabel(
+                    self.teacher_data_frame,
+                    text="No login/logout data found for teachers",
+                    font=ctk.CTkFont(size=14)
+                )
+                no_data_label.pack(pady=50)
+                return
+
+            # Prepare table
+            headers = ["Teacher Name", "Login Count", "Logout Count"]
+            table_data = [headers]
+            for record in data:
+                table_data.append([
+                    record['teacher_name'],
+                    str(record['login_count']),
+                    str(record['logout_count'])
+                ])
+
+            # Create table
+            table = CTkTable(
+                self.teacher_data_frame,
+                values=table_data,
+                width=150,
+                height=30
+            )
+            table.pack(pady=10, fill="both", expand=True)
+        except Exception as e:
+            print(f"Error loading teacher login/logout data: {e}")
+            error_label = ctk.CTkLabel(
+                self.teacher_data_frame,
+                text=f"Error loading data: {str(e)}",
+                font=ctk.CTkFont(size=14),
+                text_color="red"
+            )
+            error_label.pack(pady=50)
+            
+    def load_student_data(self):
+        """Load and display student attendance data"""
+        try:
+            selected_teacher = self.student_teacher_dropdown.get()
+            if selected_teacher == "No teachers found" or not selected_teacher:
+                return
+                
+            start_date = self.start_date_student.get_date()
+            end_date = self.end_date_student.get_date()
+            
+            # Clear previous data
+            for widget in self.student_data_frame.winfo_children():
+                widget.destroy()
+            for widget in self.student_summary_frame.winfo_children():
+                widget.destroy()
+            
+            # Display summary
+            summary_label = ctk.CTkLabel(
+                self.student_summary_frame,
+                text=f"Student Attendance Summary for {selected_teacher} ({start_date} to {end_date})",
+                font=ctk.CTkFont(size=16, weight="bold")
+            )
+            summary_label.pack(pady=5)
+            
+            # Get student attendance data (fixed logic)
+            data = self.db.get_student_attendance_data(selected_teacher, start_date, end_date)
+            
+            if not data:
+                no_data_label = ctk.CTkLabel(
+                    self.student_data_frame,
+                    text="No student data found for the selected teacher and date range",
+                    font=ctk.CTkFont(size=14)
+                )
+                no_data_label.pack(pady=50)
+                return
+            
+            # Prepare data for table
+            headers = ["Student Name", "Present Days", "Absent Days", "Total Days", "Attendance %"]
+            table_data = [headers]
+            
+            for record in data:
+                table_data.append([
+                    record['student_name'],
+                    str(record['present_count']),
+                    str(record['absent_count']),
+                    str(record['total_days']),
+                    f"{record['attendance_percentage']:.1f}%"
+                ])
+            
+            # Create table
+            table = CTkTable(
+                self.student_data_frame,
+                values=table_data,
+                width=150,
+                height=30
+            )
+            table.pack(pady=10, fill="both", expand=True)
+            
+        except Exception as e:
+            print(f"Error loading student data: {e}")
+            error_label = ctk.CTkLabel(
+                self.student_data_frame,
+                text=f"Error loading data: {str(e)}",
+                font=ctk.CTkFont(size=14),
+                text_color="red"
+            )
+            error_label.pack(pady=50)
         
     def on_closing(self):
         """Handle application closing"""

@@ -5,6 +5,30 @@ import pickle
 from typing import List, Dict, Tuple, Optional
 
 class AttendanceDatabase:
+    def get_teacher_login_logout_counts(self) -> List[Dict]:
+        """Get login/logout counts for each teacher"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT teacher_name,
+                        SUM(activity_type = 'LOGIN') as login_count,
+                        SUM(activity_type = 'LOGOUT') as logout_count
+                    FROM teacher_activity
+                    GROUP BY teacher_name
+                    ORDER BY teacher_name
+                """)
+                data = []
+                for row in cursor.fetchall():
+                    data.append({
+                        'teacher_name': row[0],
+                        'login_count': row[1] or 0,
+                        'logout_count': row[2] or 0
+                    })
+                return data
+        except Exception as e:
+            print(f"Error getting teacher login/logout counts: {e}")
+            return []
     """Handles all SQLite database operations for the attendance system"""
     
     def __init__(self, db_path: str = "attendance_system.db"):
@@ -520,3 +544,126 @@ class AttendanceDatabase:
         except Exception as e:
             print(f"Error getting daily attendance list: {e}")
             return []
+            
+    # Admin Panel Methods
+    def get_teacher_attendance_data(self, teacher_name: str, start_date: str, end_date: str) -> List[Dict]:
+        """Get attendance data for a teacher within date range"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT 
+                        a.date,
+                        a.student_name,
+                        a.status,
+                        a.marked_time,
+                        s.name as student_full_name
+                    FROM attendance_records a
+                    JOIN students s ON a.student_id = s.id
+                    WHERE a.class_teacher = ? 
+                    AND a.date BETWEEN ? AND ?
+                    ORDER BY a.date DESC, a.student_name
+                """, (teacher_name, start_date, end_date))
+                
+                data = []
+                for row in cursor.fetchall():
+                    data.append({
+                        'date': row[0],
+                        'student_name': row[1],
+                        'status': row[2],
+                        'marked_time': row[3],
+                        'teacher_name': teacher_name
+                    })
+                
+                return data
+                
+        except Exception as e:
+            print(f"Error getting teacher attendance data: {e}")
+            return []
+    
+    def get_student_attendance_data(self, teacher_name: str, start_date: str, end_date: str) -> List[Dict]:
+        """Get all students' attendance data for a teacher within date range (fixed logic)"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # Get all students for this teacher
+                cursor.execute("""
+                    SELECT id, name FROM students WHERE teacher_name = ?
+                """, (teacher_name,))
+                students = cursor.fetchall()
+                data = []
+                for student_id, student_name in students:
+                    # Get attendance records for this student in range
+                    cursor.execute("""
+                        SELECT status FROM attendance_records
+                        WHERE student_id = ? AND date BETWEEN ? AND ?
+                    """, (student_id, start_date, end_date))
+                    records = cursor.fetchall()
+                    total_days = len(records)
+                    present_count = sum(1 for r in records if r[0] == 'PRESENT')
+                    absent_count = total_days - present_count
+                    attendance_percentage = (present_count / total_days * 100) if total_days > 0 else 0.0
+                    data.append({
+                        'student_name': student_name,
+                        'teacher_name': teacher_name,
+                        'present_count': present_count,
+                        'total_days': total_days,
+                        'attendance_percentage': attendance_percentage,
+                        'absent_count': absent_count
+                    })
+                return data
+        except Exception as e:
+            print(f"Error getting student attendance data: {e}")
+            return []
+    
+    def get_teacher_summary_stats(self, teacher_name: str, start_date: str, end_date: str) -> Dict:
+        """Get summary statistics for a teacher within date range"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get total students
+                cursor.execute("""
+                    SELECT COUNT(*) FROM students WHERE teacher_name = ?
+                """, (teacher_name,))
+                total_students = cursor.fetchone()[0]
+                
+                # Get attendance statistics
+                cursor.execute("""
+                    SELECT 
+                        COUNT(CASE WHEN status = 'PRESENT' THEN 1 END) as total_present,
+                        COUNT(*) as total_records,
+                        COUNT(DISTINCT date) as days_with_records
+                    FROM attendance_records
+                    WHERE class_teacher = ? AND date BETWEEN ? AND ?
+                """, (teacher_name, start_date, end_date))
+                
+                stats = cursor.fetchone()
+                total_present = stats[0] or 0
+                total_records = stats[1] or 0
+                days_with_records = stats[2] or 0
+                
+                avg_attendance = (total_present / total_records * 100) if total_records > 0 else 0
+                
+                return {
+                    'teacher_name': teacher_name,
+                    'total_students': total_students,
+                    'total_present': total_present,
+                    'total_records': total_records,
+                    'days_with_records': days_with_records,
+                    'avg_attendance_percentage': avg_attendance,
+                    'date_range': f"{start_date} to {end_date}"
+                }
+                
+        except Exception as e:
+            print(f"Error getting teacher summary stats: {e}")
+            return {
+                'teacher_name': teacher_name,
+                'total_students': 0,
+                'total_present': 0,
+                'total_records': 0,
+                'days_with_records': 0,
+                'avg_attendance_percentage': 0,
+                'date_range': f"{start_date} to {end_date}"
+            }
