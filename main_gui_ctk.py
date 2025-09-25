@@ -238,122 +238,112 @@ class IntegratedAttendanceSystem:
         # Left - Camera
         camera_frame = ctk.CTkFrame(top_section)
         camera_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        
+
         camera_title = ctk.CTkLabel(
             camera_frame,
             text="Student Face Recognition",
             font=ctk.CTkFont(size=16, weight="bold")
         )
         camera_title.pack(pady=10)
-        
+
         # Webcam display
         self.class_webcam_label = ctk.CTkLabel(camera_frame, text="")
         self.class_webcam_label.pack(pady=5)
-        
-        # Middle - Controls and Buttons
-        controls_frame = ctk.CTkFrame(top_section)
-        controls_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
-        
+
+        # Right - Expanded Controls, Buttons and Summary
+        controls_summary_frame = ctk.CTkFrame(top_section)
+        controls_summary_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+
+        # Controls section
         controls_title = ctk.CTkLabel(
-            controls_frame,
+            controls_summary_frame,
             text="Class Attendance Controls",
             font=ctk.CTkFont(size=16, weight="bold")
         )
-        controls_title.pack(pady=15)
+        controls_title.pack(pady=10)
+
+        # Horizontal layout for buttons and summary
+        content_frame = ctk.CTkFrame(controls_summary_frame)
+        content_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Class attendance buttons
-        buttons_frame = ctk.CTkFrame(controls_frame)
-        buttons_frame.pack(pady=20)
-        
+        # Left side - Buttons
+        buttons_frame = ctk.CTkFrame(content_frame)
+        buttons_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
+
         # Mark Present button
         self.class_mark_present_btn = ctk.CTkButton(
             buttons_frame,
             text="Mark Present",
             font=ctk.CTkFont(size=14, weight="bold"),
-            width=160,
-            height=45,
+            width=180,
+            height=50,
             command=lambda: self._mark_regular_attendance("present"),
             fg_color=("#1f6aa5", "#1f6aa5")
         )
-        self.class_mark_present_btn.pack(pady=5)
-        
+        self.class_mark_present_btn.pack(pady=8)
+
         # Register student button
         self.class_register_student_btn = ctk.CTkButton(
             buttons_frame,
             text="Register New Student",
             font=ctk.CTkFont(size=12),
-            width=160,
-            height=35,
+            width=180,
+            height=40,
             command=self.register_new_student,
             fg_color=("#388e3c", "#388e3c")
         )
         self.class_register_student_btn.pack(pady=5)
-        
+
         # View Attendance button
         self.class_view_attendance_btn = ctk.CTkButton(
             buttons_frame,
             text="View Attendance Log",
             font=ctk.CTkFont(size=12),
-            width=160,
-            height=35,
+            width=180,
+            height=40,
             command=lambda: self.open_attendance_page("regular"),
             fg_color=("#d32f2f", "#d32f2f")
         )
         self.class_view_attendance_btn.pack(pady=5)
-        
-        # Right - Summary and logout
-        summary_frame = ctk.CTkFrame(top_section)  
-        summary_frame.grid(row=0, column=2, padx=5, pady=5, sticky="nsew")
-        
-        summary_title = ctk.CTkLabel(
-            summary_frame,
-            text="Summary & Controls",
-            font=ctk.CTkFont(size=16, weight="bold")
-        )
-        summary_title.pack(pady=10)
-        
-        # Overall attendance summary
-        self.class_overall_summary = ctk.CTkTextbox(
-            summary_frame,
-            width=220,
-            height=120
-        )
-        self.class_overall_summary.pack(pady=10)
-        
-        # Teacher logout button
+
+        # Teacher logout button (moved from summary section)
         self.teacher_logout_btn = ctk.CTkButton(
-            summary_frame,
+            buttons_frame,
             text="Teacher Logout",
             font=ctk.CTkFont(size=14),
-            width=160,
-            height=40,
+            width=180,
+            height=45,
             command=self.teacher_logout,
             fg_color=("#d32f2f", "#d32f2f")
         )
-        self.teacher_logout_btn.pack(pady=15)
-        
-        # Configure grid weights for top section
-        top_section.grid_columnconfigure(0, weight=1)
-        top_section.grid_columnconfigure(1, weight=1)
-        top_section.grid_columnconfigure(2, weight=1)
-        
-        # Bottom section - Detailed summary
-        bottom_section = ctk.CTkFrame(main_container)
-        bottom_section.pack(fill="x", padx=5, pady=(10, 5))
-        
-        detailed_title = ctk.CTkLabel(
-            bottom_section,
-            text="Today's Class Attendance Summary",
+        self.teacher_logout_btn.pack(pady=10)
+
+        # Right side - Summary and logout
+        summary_section = ctk.CTkFrame(content_frame)
+        summary_section.grid(row=0, column=1, padx=10, pady=5, sticky="nsew")
+
+        summary_title = ctk.CTkLabel(
+            summary_section,
+            text="Today's Summary",
             font=ctk.CTkFont(size=14, weight="bold")
         )
-        detailed_title.pack(pady=10)
-        
-        self.class_summary_textbox = ctk.CTkTextbox(
-            bottom_section,
-            width=900,
-            height=120
+        summary_title.pack(pady=5)
+
+        # Overall attendance summary
+        self.class_overall_summary = ctk.CTkTextbox(
+            summary_section,
+            width=280,
+            height=200
         )
-        self.class_summary_textbox.pack(pady=10)
+        self.class_overall_summary.pack(pady=10)
+
+        # Configure grid weights
+        content_frame.grid_columnconfigure(0, weight=1)
+        content_frame.grid_columnconfigure(1, weight=1)
+        
+        # Configure top section weights - give more space to right column
+        top_section.grid_columnconfigure(0, weight=1)
+        top_section.grid_columnconfigure(1, weight=2)
         
     def setup_meal_attendance_tab(self):
         """Setup comprehensive Midday Meal Attendance tab with full functionality"""
@@ -370,103 +360,109 @@ class IntegratedAttendanceSystem:
         # Left - Camera
         camera_frame = ctk.CTkFrame(top_section)
         camera_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        
+
         camera_title = ctk.CTkLabel(
             camera_frame,
             text="Student Face Recognition",
             font=ctk.CTkFont(size=16, weight="bold")
         )
         camera_title.pack(pady=10)
-        
+
         # Webcam display (shared with class tab)
         self.meal_webcam_label = ctk.CTkLabel(camera_frame, text="")
         self.meal_webcam_label.pack(pady=5)
-        
-        # Middle - Controls and Buttons
-        controls_frame = ctk.CTkFrame(top_section)
-        controls_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
-        
+
+        # Right - Expanded Controls, Buttons and Summary
+        controls_summary_frame = ctk.CTkFrame(top_section)
+        controls_summary_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+
+        # Controls section
         controls_title = ctk.CTkLabel(
-            controls_frame,
+            controls_summary_frame,
             text="Meal Attendance Controls",
             font=ctk.CTkFont(size=16, weight="bold")
         )
-        controls_title.pack(pady=15)
+        controls_title.pack(pady=10)
+
+        # Horizontal layout for buttons and summary
+        content_frame = ctk.CTkFrame(controls_summary_frame)
+        content_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Meal attendance buttons
-        buttons_frame = ctk.CTkFrame(controls_frame)
-        buttons_frame.pack(pady=20)
-        
+        # Left side - Buttons
+        buttons_frame = ctk.CTkFrame(content_frame)
+        buttons_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
+
         # Mark Meal Present button
         self.meal_mark_present_btn = ctk.CTkButton(
             buttons_frame,
             text="Mark Meal Present",
             font=ctk.CTkFont(size=14, weight="bold"),
-            width=160,
-            height=45,
+            width=180,
+            height=50,
             command=lambda: self._mark_meal_attendance("present"),
             fg_color=("#1f6aa5", "#1f6aa5")
         )
-        self.meal_mark_present_btn.pack(pady=5)
-        
+        self.meal_mark_present_btn.pack(pady=8)
+
         # Register student button (same functionality)
         self.meal_register_student_btn = ctk.CTkButton(
             buttons_frame,
             text="Register New Student",
             font=ctk.CTkFont(size=12),
-            width=160,
-            height=35,
+            width=180,
+            height=40,
             command=self.register_new_student,
             fg_color=("#388e3c", "#388e3c")
         )
         self.meal_register_student_btn.pack(pady=5)
-        
+
         # View Meal Log button
         self.meal_view_attendance_btn = ctk.CTkButton(
             buttons_frame,
             text="View Meal Log",
             font=ctk.CTkFont(size=12),
-            width=160,
-            height=35,
+            width=180,
+            height=40,
             command=lambda: self.open_attendance_page("meal"),
             fg_color=("#d32f2f", "#d32f2f")
         )
         self.meal_view_attendance_btn.pack(pady=5)
-        
-        # Right - Summary
-        summary_frame = ctk.CTkFrame(top_section)
-        summary_frame.grid(row=0, column=2, padx=5, pady=5, sticky="nsew")
-        
+
+        # Right side - Summary and info
+        summary_section = ctk.CTkFrame(content_frame)
+        summary_section.grid(row=0, column=1, padx=10, pady=5, sticky="nsew")
+
         summary_title = ctk.CTkLabel(
-            summary_frame,
+            summary_section,
             text="Meal Program Summary",
-            font=ctk.CTkFont(size=16, weight="bold")
+            font=ctk.CTkFont(size=14, weight="bold")
         )
-        summary_title.pack(pady=10)
-        
+        summary_title.pack(pady=5)
+
         # Overall meal summary
         self.meal_overall_summary = ctk.CTkTextbox(
-            summary_frame,
-            width=220,
+            summary_section,
+            width=280,
             height=120
         )
         self.meal_overall_summary.pack(pady=10)
-        
+
         # Additional meal program info
         info_label = ctk.CTkLabel(
-            summary_frame,
-            text="Midday Meal Program\nTracking System",
+            summary_section,
+            text="Midday Meal Program\nGovernment Tracking System\nNutritional Support Initiative",
             font=ctk.CTkFont(size=12),
             justify="center"
         )
         info_label.pack(pady=15)
+
+        # Configure grid weights
+        content_frame.grid_columnconfigure(0, weight=1)
+        content_frame.grid_columnconfigure(1, weight=1)
         
-        # Configure grid weights for top section
+        # Configure top section weights - give more space to right column
         top_section.grid_columnconfigure(0, weight=1)
-        top_section.grid_columnconfigure(1, weight=1)
-        top_section.grid_columnconfigure(2, weight=1)
-        
-        # Bottom section - Detailed summary
+        top_section.grid_columnconfigure(1, weight=2)        # Bottom section - Detailed summary
         bottom_section = ctk.CTkFrame(main_container)
         bottom_section.pack(fill="x", padx=5, pady=(10, 5))
         
@@ -487,7 +483,12 @@ class IntegratedAttendanceSystem:
     def start_camera(self):
         """Initialize and start camera feed"""
         try:
-            self.camera = cv2.VideoCapture(0)
+            # Built-in camera (uncomment to use):
+            # self.camera = cv2.VideoCapture(0)
+            
+            # USB camera (currently active):
+            self.camera = cv2.VideoCapture(1)
+            
             if not self.camera.isOpened():
                 self.update_status("Error: Could not open camera", "red")
                 return
@@ -1313,9 +1314,9 @@ Attendance Rate: {summary['attendance_percentage']:.1f}%
 Teacher: {self.current_teacher}
 Date: {datetime.date.today()}"""
 
-            if hasattr(self, 'class_summary_textbox') and self.class_summary_textbox.winfo_exists():
-                self.class_summary_textbox.delete("1.0", "end")
-                self.class_summary_textbox.insert("1.0", text)
+            if hasattr(self, 'class_overall_summary') and self.class_overall_summary.winfo_exists():
+                self.class_overall_summary.delete("1.0", "end")
+                self.class_overall_summary.insert("1.0", text)
                 
         except Exception as e:
             print(f"Error updating class summary: {e}")
